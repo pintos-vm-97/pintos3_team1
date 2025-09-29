@@ -1,15 +1,15 @@
 #ifndef USERPROG_SYSCALL_H
 #define USERPROG_SYSCALL_H
 
-#include <stdbool.h>
 #include <debug.h>
+#include <stdbool.h>
 #include <stddef.h>
 
 struct file;
 
 /* Process identifier. */
 typedef int pid_t;
-#define PID_ERROR ((pid_t) - 1)
+#define PID_ERROR ((pid_t)-1)
 
 struct intr_frame;
 
@@ -30,7 +30,9 @@ void syscall_seek(int fd, unsigned position);
 unsigned syscall_tell(int fd);
 void syscall_close(int fd);
 
-int syscall_dup2(int oldfd, int newfd);    // dup2 시스템 콜을 처리하는 커널 측 핸들러 선언
-struct file *syscall_get_std_file(int fd); // STD 스트림 더미 파일 객체를 돌려주는 헬퍼 선언
+int syscall_dup2(int oldfd,
+                 int newfd); // dup2 시스템 콜을 처리하는 커널 측 핸들러 선언
+struct file *
+syscall_get_std_file(int fd); // STD 스트림 더미 파일 객체를 돌려주는 헬퍼 선언
 
 #endif /* userprog/syscall.h */
