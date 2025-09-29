@@ -25,6 +25,12 @@ core
 # 임시 파일
 *~
 *.swp
-
+c_cpp_properties.json
 # macOS
 .DS_Store
+select_test.sh
+select_test.sh:Zone.Identifier
+.test_config
+.test_config:Zone.Identifier
+
+.test_status
