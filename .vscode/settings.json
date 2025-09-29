@@ -63,20 +63,28 @@
       "gdt.h": "c"
     },
   /* 포맷팅 설정 */
-  "editor.formatOnSave": true, // 파일 저장(ctrl+s)할 때 자동 포맷팅
+  "editor.formatOnSave": true,
+  // 파일 저장(ctrl+s)할 때 자동 포맷팅
   /* 들여쓰기 설정 */
   "editor.tabSize": 2,
   "editor.insertSpaces": true,
-  "editor.detectIndentation": false, // 항상 위의 들여쓰기 설정 사용(기본 설정 모두 무시)
+  "editor.detectIndentation": false,
+  // 항상 위의 들여쓰기 설정 사용(기본 설정 모두 무시)
   /* 공백 문자 설정 */
-  "editor.trimAutoWhitespace": true, // 자동 공백 문자 제거
-  "files.trimTrailingWhitespace": true, // 저장 시 행 끝 공백 제거
-  "files.trimFinalNewlines": true, // 파일 끝의 빈 줄 제거
+  "editor.trimAutoWhitespace": true,
+  // 자동 공백 문자 제거
+  "files.trimTrailingWhitespace": true,
+  // 저장 시 행 끝 공백 제거
+  "files.trimFinalNewlines": true,
+  // 파일 끝의 빈 줄 제거
   /* 줄바꿈 설정 */
-  "files.eol": "\n", // LF 사용
+  "files.eol": "\n",
+  // LF 사용
   /* C/C++ 특화 설정 */
-  "C_Cpp.clang_format_fallbackStyle": "Google", // 기본 스타일을 Google로 설정
-  "C_Cpp.clang_format_sortIncludes": true, // #include문 자동 정렬 활성화
+  "C_Cpp.clang_format_fallbackStyle": "Google",
+  // 기본 스타일을 Google로 설정
+  "C_Cpp.clang_format_sortIncludes": true,
+  // #include문 자동 정렬 활성화
   /* 기타 편의 설정 */
   "editor.minimap.enabled": false, // 미니맵 비활성화
   "editor.renderWhitespace": "boundary", // 공백 문자 시각화
