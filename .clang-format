@@ -1,0 +1,6 @@
+BasedOnStyle: Google          # 기본 베이스를 Google 스타일로
+IndentWidth: 2                # 들여쓰기 2칸
+UseTab: Never                 # 탭 대신 공백 사용
+ColumnLimit: 80               # 줄 길이 80자 제한
+SortIncludes: true            # #include 자동 정렬 활성화
+IncludeBlocks: Regroup        # include 그룹별로 빈줄을 유지/재정렬
