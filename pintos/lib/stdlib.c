@@ -13,8 +13,7 @@ int atoi(const char *s) {
   ASSERT(s != NULL);
 
   /* Skip white space. */
-  while (isspace((unsigned char)*s))
-    s++;
+  while (isspace((unsigned char)*s)) s++;
 
   /* Parse sign. */
   negative = false;
@@ -29,10 +28,8 @@ int atoi(const char *s) {
      negative, and then make it positive later, because the
      negative range of an int is bigger than the positive range
      on a 2's complement system. */
-  for (value = 0; isdigit(*s); s++)
-    value = value * 10 - (*s - '0');
-  if (!negative)
-    value = -value;
+  for (value = 0; isdigit(*s); s++) value = value * 10 - (*s - '0');
+  if (!negative) value = -value;
 
   return value;
 }
@@ -99,8 +96,7 @@ static void heapify(unsigned char *array, size_t i, size_t cnt, size_t size,
 
     /* If the maximum value is already in element I, we're
        done. */
-    if (max == i)
-      break;
+    if (max == i) break;
 
     /* Swap and continue down the heap. */
     do_swap(array, i, max, size);
@@ -123,8 +119,7 @@ void sort(void *array, size_t cnt, size_t size,
   ASSERT(size > 0);
 
   /* Build a heap. */
-  for (i = cnt / 2; i > 0; i--)
-    heapify(array, i, cnt, size, compare, aux);
+  for (i = cnt / 2; i > 0; i--) heapify(array, i, cnt, size, compare, aux);
 
   /* Sort the heap. */
   for (i = cnt; i > 1; i--) {

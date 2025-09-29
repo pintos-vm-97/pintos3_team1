@@ -1,11 +1,13 @@
 #include "userprog/tss.h"
+
+#include <debug.h>
+#include <stddef.h>
+
 #include "intrinsic.h"
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "userprog/gdt.h"
-#include <debug.h>
-#include <stddef.h>
 
 /* The Task-State Segment (TSS).
  *

@@ -22,7 +22,6 @@
    Modified by Minkyu Jung, Jinyoung Oh <cs330_ta@casys.kaist.ac.kr>
 */
 
-#include "tests/lib.h"
 #include <debug.h>
 #include <random.h>
 #include <stdbool.h>
@@ -30,6 +29,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syscall.h>
+
+#include "tests/lib.h"
 
 static const int EXPECTED_DEPTH_TO_PASS = 10;
 static const int EXPECTED_REPETITIONS = 10;
@@ -56,8 +57,7 @@ static void consume_some_resources(void) {
         break;
     }
 #else
-    if (open(test_name) == -1)
-      break;
+    if (open(test_name) == -1) break;
 #endif
   }
 }
@@ -69,27 +69,27 @@ static int NO_INLINE consume_some_resources_and_die(void) {
   int *KERN_BASE = (int *)0x8004000000;
 
   switch (random_ulong() % 5) {
-  case 0:
-    *(int *)NULL = 42;
-    break;
+    case 0:
+      *(int *)NULL = 42;
+      break;
 
-  case 1:
-    return *(int *)NULL;
+    case 1:
+      return *(int *)NULL;
 
-  case 2:
-    return *KERN_BASE;
+    case 2:
+      return *KERN_BASE;
 
-  case 3:
-    *KERN_BASE = 42;
-    break;
+    case 3:
+      *KERN_BASE = 42;
+      break;
 
-  case 4:
-    open((char *)KERN_BASE);
-    exit(-1);
-    break;
+    case 4:
+      open((char *)KERN_BASE);
+      exit(-1);
+      break;
 
-  default:
-    NOT_REACHED();
+    default:
+      NOT_REACHED();
   }
   return 0;
 }
@@ -122,8 +122,7 @@ int make_children(void) {
   }
 
   int depth = wait(pid);
-  if (depth < 0)
-    fail("Should return > 0.");
+  if (depth < 0) fail("Should return > 0.");
 
   if (i == 0)
     return depth;

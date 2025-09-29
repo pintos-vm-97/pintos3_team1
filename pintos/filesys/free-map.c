@@ -1,9 +1,11 @@
 #include "filesys/free-map.h"
+
+#include <bitmap.h>
+#include <debug.h>
+
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 #include "filesys/inode.h"
-#include <bitmap.h>
-#include <debug.h>
 
 static struct file *free_map_file; /* Free map file. */
 static struct bitmap *free_map;    /* Free map, one bit per disk sector. */
@@ -11,8 +13,7 @@ static struct bitmap *free_map;    /* Free map, one bit per disk sector. */
 /* Initializes the free map. */
 void free_map_init(void) {
   free_map = bitmap_create(disk_size(filesys_disk));
-  if (free_map == NULL)
-    PANIC("bitmap creation failed--disk is too large");
+  if (free_map == NULL) PANIC("bitmap creation failed--disk is too large");
   bitmap_mark(free_map, FREE_MAP_SECTOR);
   bitmap_mark(free_map, ROOT_DIR_SECTOR);
 }
@@ -28,8 +29,7 @@ bool free_map_allocate(size_t cnt, disk_sector_t *sectorp) {
     bitmap_set_multiple(free_map, sector, cnt, false);
     sector = BITMAP_ERROR;
   }
-  if (sector != BITMAP_ERROR)
-    *sectorp = sector;
+  if (sector != BITMAP_ERROR) *sectorp = sector;
   return sector != BITMAP_ERROR;
 }
 
@@ -43,10 +43,8 @@ void free_map_release(disk_sector_t sector, size_t cnt) {
 /* Opens the free map file and reads it from disk. */
 void free_map_open(void) {
   free_map_file = file_open(inode_open(FREE_MAP_SECTOR));
-  if (free_map_file == NULL)
-    PANIC("can't open free map");
-  if (!bitmap_read(free_map, free_map_file))
-    PANIC("can't read free map");
+  if (free_map_file == NULL) PANIC("can't open free map");
+  if (!bitmap_read(free_map, free_map_file)) PANIC("can't read free map");
 }
 
 /* Writes the free map to disk and closes the free map file. */
@@ -61,8 +59,6 @@ void free_map_create(void) {
 
   /* Write bitmap to file. */
   free_map_file = file_open(inode_open(FREE_MAP_SECTOR));
-  if (free_map_file == NULL)
-    PANIC("can't open free map");
-  if (!bitmap_write(free_map, free_map_file))
-    PANIC("can't write free map");
+  if (free_map_file == NULL) PANIC("can't open free map");
+  if (!bitmap_write(free_map, free_map_file)) PANIC("can't write free map");
 }

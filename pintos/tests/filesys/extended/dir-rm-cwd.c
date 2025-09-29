@@ -2,9 +2,10 @@
    fail.  The requirements in each case are different; refer to
    the assignment for details. */
 
+#include <syscall.h>
+
 #include "tests/lib.h"
 #include "tests/main.h"
-#include <syscall.h>
 
 static int wrap_open(const char *name) {
   static int fds[8], fd_cnt;
@@ -12,8 +13,7 @@ static int wrap_open(const char *name) {
 
   CHECK((fd = open(name)) > 1, "open \"%s\"", name);
   for (i = 0; i < fd_cnt; i++)
-    if (fds[i] == fd)
-      fail("fd returned is not unique");
+    if (fds[i] == fd) fail("fd returned is not unique");
   fds[fd_cnt++] = fd;
   return fd;
 }

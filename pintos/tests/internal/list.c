@@ -8,11 +8,12 @@
 */
 
 #undef NDEBUG
-#include "threads/test.h"
 #include <debug.h>
 #include <list.h>
 #include <random.h>
 #include <stdio.h>
+
+#include "threads/test.h"
 
 /* Maximum number of elements in a linked list that we will
    test. */
@@ -46,14 +47,12 @@ void test(void) {
       int i, ofs;
 
       /* Put values 0...SIZE in random order in VALUES. */
-      for (i = 0; i < size; i++)
-        values[i].value = i;
+      for (i = 0; i < size; i++) values[i].value = i;
       shuffle(values, size);
 
       /* Assemble list. */
       list_init(&list);
-      for (i = 0; i < size; i++)
-        list_push_back(&list, &values[i].elem);
+      for (i = 0; i < size; i++) list_push_back(&list, &values[i].elem);
 
       /* Verify correct minimum and maximum elements. */
       e = list_min(&list, value_less, NULL);

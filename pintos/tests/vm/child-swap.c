@@ -2,15 +2,16 @@
  * Lastly, frees the allocated memory.
  */
 
-#include "tests/lib.h"
-#include "tests/main.h"
 #include <stdint.h>
 #include <string.h>
 #include <syscall.h>
 
+#include "tests/lib.h"
+#include "tests/main.h"
+
 #define PAGE_SHIFT 12
-#define PAGE_SIZE (1 << PAGE_SHIFT) // 4KB
-#define ONE_MB (1 << 20)            // 1MB
+#define PAGE_SIZE (1 << PAGE_SHIFT)  // 4KB
+#define ONE_MB (1 << 20)             // 1MB
 #define CHUNK_SIZE (1 * ONE_MB)
 #define PAGE_COUNT (CHUNK_SIZE / PAGE_SIZE)
 

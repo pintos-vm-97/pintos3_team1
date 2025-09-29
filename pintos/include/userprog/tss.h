@@ -1,8 +1,9 @@
 #ifndef USERPROG_TSS_H
 #define USERPROG_TSS_H
 
-#include "threads/thread.h"
 #include <stdint.h>
+
+#include "threads/thread.h"
 
 struct task_state {
   uint32_t res1;

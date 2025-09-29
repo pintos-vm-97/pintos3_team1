@@ -1,10 +1,12 @@
 #include "filesys/directory.h"
-#include "filesys/filesys.h"
-#include "filesys/inode.h"
-#include "threads/malloc.h"
+
 #include <list.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "filesys/filesys.h"
+#include "filesys/inode.h"
+#include "threads/malloc.h"
 
 /* A directory. */
 struct dir {
@@ -81,10 +83,8 @@ static bool lookup(const struct dir *dir, const char *name,
   for (ofs = 0; inode_read_at(dir->inode, &e, sizeof e, ofs) == sizeof e;
        ofs += sizeof e)
     if (e.in_use && !strcmp(name, e.name)) {
-      if (ep != NULL)
-        *ep = e;
-      if (ofsp != NULL)
-        *ofsp = ofs;
+      if (ep != NULL) *ep = e;
+      if (ofsp != NULL) *ofsp = ofs;
       return true;
     }
   return false;
@@ -123,12 +123,10 @@ bool dir_add(struct dir *dir, const char *name, disk_sector_t inode_sector) {
   ASSERT(name != NULL);
 
   /* Check NAME for validity. */
-  if (*name == '\0' || strlen(name) > NAME_MAX)
-    return false;
+  if (*name == '\0' || strlen(name) > NAME_MAX) return false;
 
   /* Check that NAME is not in use. */
-  if (lookup(dir, name, NULL, NULL))
-    goto done;
+  if (lookup(dir, name, NULL, NULL)) goto done;
 
   /* Set OFS to offset of free slot.
    * If there are no free slots, then it will be set to the
@@ -139,8 +137,7 @@ bool dir_add(struct dir *dir, const char *name, disk_sector_t inode_sector) {
    * read due to something intermittent such as low memory. */
   for (ofs = 0; inode_read_at(dir->inode, &e, sizeof e, ofs) == sizeof e;
        ofs += sizeof e)
-    if (!e.in_use)
-      break;
+    if (!e.in_use) break;
 
   /* Write slot. */
   e.in_use = true;
@@ -165,18 +162,15 @@ bool dir_remove(struct dir *dir, const char *name) {
   ASSERT(name != NULL);
 
   /* Find directory entry. */
-  if (!lookup(dir, name, &e, &ofs))
-    goto done;
+  if (!lookup(dir, name, &e, &ofs)) goto done;
 
   /* Open inode. */
   inode = inode_open(e.inode_sector);
-  if (inode == NULL)
-    goto done;
+  if (inode == NULL) goto done;
 
   /* Erase directory entry. */
   e.in_use = false;
-  if (inode_write_at(dir->inode, &e, sizeof e, ofs) != sizeof e)
-    goto done;
+  if (inode_write_at(dir->inode, &e, sizeof e, ofs) != sizeof e) goto done;
 
   /* Remove inode. */
   inode_remove(inode);

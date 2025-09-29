@@ -1,4 +1,15 @@
 #include "threads/init.h"
+
+#include <console.h>
+#include <debug.h>
+#include <limits.h>
+#include <random.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "devices/input.h"
 #include "devices/kbd.h"
 #include "devices/serial.h"
@@ -12,15 +23,6 @@
 #include "threads/palloc.h"
 #include "threads/pte.h"
 #include "threads/thread.h"
-#include <console.h>
-#include <debug.h>
-#include <limits.h>
-#include <random.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #ifdef USERPROG
 #include "userprog/exception.h"
 #include "userprog/gdt.h"
@@ -72,9 +74,9 @@ int main(void) {
   bss_init();
 
   /* Break command line into arguments and parse options. */
-  argv = read_command_line(); // command_line을 읽는다
-  argv =
-      parse_options(argv); // 해당 line의 option 들을 parsing하여 argv에 담는다.
+  argv = read_command_line();  // command_line을 읽는다
+  argv = parse_options(
+      argv);  // 해당 line의 option 들을 parsing하여 argv에 담는다.
 
   /* Initialize ourselves as a thread so we can use locks,
      then enable console locking. */
@@ -118,12 +120,11 @@ int main(void) {
   printf("Boot complete.\n");
 
   /* Run actions specified on kernel command line. */
-  run_actions(argv); // boot시 전달된 커널 커맨드라인에 적힌 "액션들"을 실제로
-                     // 실행하라. argv를 여기서 실행시킴
+  run_actions(argv);  // boot시 전달된 커널 커맨드라인에 적힌 "액션들"을 실제로
+                      // 실행하라. argv를 여기서 실행시킴
 
   /* Finish up. */
-  if (power_off_when_done)
-    power_off();
+  if (power_off_when_done) power_off();
   thread_exit();
 }
 
@@ -157,8 +158,7 @@ static void paging_init(uint64_t mem_end) {
     if ((uint64_t)&start <= va && va < (uint64_t)&_end_kernel_text)
       perm &= ~PTE_W;
 
-    if ((pte = pml4e_walk(pml4, va, 1)) != NULL)
-      *pte = pa | perm;
+    if ((pte = pml4e_walk(pml4, va, 1)) != NULL) *pte = pa | perm;
   }
 
   // reload cr3
@@ -177,8 +177,7 @@ static char **read_command_line(void) {
   p = ptov(LOADER_ARGS);
   end = p + LOADER_ARGS_LEN;
   for (i = 0; i < argc; i++) {
-    if (p >= end)
-      PANIC("command line arguments overflow");
+    if (p >= end) PANIC("command line arguments overflow");
 
     argv[i] = p;
     p += strnlen(p, end - p) + 1;
@@ -234,7 +233,7 @@ static char **parse_options(char **argv) {
    Runs the task specified in ARGV[1]. */
 static void run_task(char **argv) {
   const char *task =
-      argv[1]; // argv[0]는 run이고 argv[1]부터 filename이 시작되는 문자열
+      argv[1];  // argv[0]는 run이고 argv[1]부터 filename이 시작되는 문자열
 
   printf("Executing '%s':\n", task);
 #ifdef USERPROG
@@ -304,31 +303,32 @@ static void run_actions(char **argv) {
 /* Prints a kernel command line help message and powers off the
    machine. */
 static void usage(void) {
-  printf("\nCommand line syntax: [OPTION...] [ACTION...]\n"
-         "Options must precede actions.\n"
-         "Actions are executed in the order specified.\n"
-         "\nAvailable actions:\n"
+  printf(
+      "\nCommand line syntax: [OPTION...] [ACTION...]\n"
+      "Options must precede actions.\n"
+      "Actions are executed in the order specified.\n"
+      "\nAvailable actions:\n"
 #ifdef USERPROG
-         "  run 'PROG [ARG...]' Run PROG and wait for it to complete.\n"
+      "  run 'PROG [ARG...]' Run PROG and wait for it to complete.\n"
 #else
-         "  run TEST           Run TEST.\n"
+      "  run TEST           Run TEST.\n"
 #endif
 #ifdef FILESYS
-         "  ls                 List files in the root directory.\n"
-         "  cat FILE           Print FILE to the console.\n"
-         "  rm FILE            Delete FILE.\n"
-         "Use these actions indirectly via `pintos' -g and -p options:\n"
-         "  put FILE           Put FILE into file system from scratch disk.\n"
-         "  get FILE           Get FILE from file system into scratch disk.\n"
+      "  ls                 List files in the root directory.\n"
+      "  cat FILE           Print FILE to the console.\n"
+      "  rm FILE            Delete FILE.\n"
+      "Use these actions indirectly via `pintos' -g and -p options:\n"
+      "  put FILE           Put FILE into file system from scratch disk.\n"
+      "  get FILE           Get FILE from file system into scratch disk.\n"
 #endif
-         "\nOptions:\n"
-         "  -h                 Print this help message and power off.\n"
-         "  -q                 Power off VM after actions or on panic.\n"
-         "  -f                 Format file system disk during startup.\n"
-         "  -rs=SEED           Set random number seed to SEED.\n"
-         "  -mlfqs             Use multi-level feedback queue scheduler.\n"
+      "\nOptions:\n"
+      "  -h                 Print this help message and power off.\n"
+      "  -q                 Power off VM after actions or on panic.\n"
+      "  -f                 Format file system disk during startup.\n"
+      "  -rs=SEED           Set random number seed to SEED.\n"
+      "  -mlfqs             Use multi-level feedback queue scheduler.\n"
 #ifdef USERPROG
-         "  -ul=COUNT          Limit user memory to COUNT pages.\n"
+      "  -ul=COUNT          Limit user memory to COUNT pages.\n"
 #endif
   );
   power_off();
@@ -345,8 +345,7 @@ void power_off(void) {
 
   printf("Powering off...\n");
   outw(0x604, 0x2000); /* Poweroff command for qemu */
-  for (;;)
-    ;
+  for (;;);
 }
 
 /* Print statistics about Pintos execution. */

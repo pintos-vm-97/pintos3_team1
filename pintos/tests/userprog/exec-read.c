@@ -1,12 +1,13 @@
 /* Read document for exec() carefully... */
 
+#include <stdio.h>
+#include <string.h>
+#include <syscall.h>
+
 #include "tests/lib.h"
 #include "tests/main.h"
 #include "tests/userprog/boundary.h"
 #include "tests/userprog/sample.inc"
-#include <stdio.h>
-#include <string.h>
-#include <syscall.h>
 
 void test_main(void) {
   pid_t pid;

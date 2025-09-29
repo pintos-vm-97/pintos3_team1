@@ -1,4 +1,5 @@
 #include "list.h"
+
 #include "../debug.h"
 
 /* Our doubly linked lists have two header elements: the "head"
@@ -157,8 +158,7 @@ void list_insert(struct list_elem *before, struct list_elem *elem) {
 void list_splice(struct list_elem *before, struct list_elem *first,
                  struct list_elem *last) {
   ASSERT(is_interior(before) || is_tail(before));
-  if (first == last)
-    return;
+  if (first == last) return;
   last = list_prev(last);
 
   ASSERT(is_interior(first));
@@ -264,8 +264,7 @@ size_t list_size(struct list *list) {
   struct list_elem *e;
   size_t cnt = 0;
 
-  for (e = list_begin(list); e != list_end(list); e = list_next(e))
-    cnt++;
+  for (e = list_begin(list); e != list_end(list); e = list_next(e)) cnt++;
   return cnt;
 }
 
@@ -299,8 +298,7 @@ static bool is_sorted(struct list_elem *a, struct list_elem *b,
                       list_less_func *less, void *aux) {
   if (a != b)
     while ((a = list_next(a)) != b)
-      if (less(a, list_prev(a), aux))
-        return false;
+      if (less(a, list_prev(a), aux)) return false;
   return true;
 }
 
@@ -371,8 +369,7 @@ void list_sort(struct list *list, list_less_func *less, void *aux) {
       /* Locate two adjacent runs of nondecreasing elements
          A0...A1B0 and A1B0...B1. */
       a1b0 = find_end_of_run(a0, list_end(list), less, aux);
-      if (a1b0 == list_end(list))
-        break;
+      if (a1b0 == list_end(list)) break;
       b1 = find_end_of_run(a1b0, list_end(list), less, aux);
 
       /* Merge the runs. */
@@ -395,8 +392,7 @@ void list_insert_ordered(struct list *list, struct list_elem *elem,
   ASSERT(less != NULL);
 
   for (e = list_begin(list); e != list_end(list); e = list_next(e))
-    if (less(elem, e, aux))
-      break;
+    if (less(elem, e, aux)) break;
   return list_insert(e, elem);
 }
 
@@ -410,15 +406,13 @@ void list_unique(struct list *list, struct list *duplicates,
 
   ASSERT(list != NULL);
   ASSERT(less != NULL);
-  if (list_empty(list))
-    return;
+  if (list_empty(list)) return;
 
   elem = list_begin(list);
   while ((next = list_next(elem)) != list_end(list))
     if (!less(elem, next, aux) && !less(next, elem, aux)) {
       list_remove(next);
-      if (duplicates != NULL)
-        list_push_back(duplicates, next);
+      if (duplicates != NULL) list_push_back(duplicates, next);
     } else
       elem = next;
 }
@@ -433,8 +427,7 @@ struct list_elem *list_max(struct list *list, list_less_func *less, void *aux) {
     struct list_elem *e;
 
     for (e = list_next(max); e != list_end(list); e = list_next(e))
-      if (less(max, e, aux))
-        max = e;
+      if (less(max, e, aux)) max = e;
   }
   return max;
 }
@@ -449,8 +442,7 @@ struct list_elem *list_min(struct list *list, list_less_func *less, void *aux) {
     struct list_elem *e;
 
     for (e = list_next(min); e != list_end(list); e = list_next(e))
-      if (less(e, min, aux))
-        min = e;
+      if (less(e, min, aux)) min = e;
   }
   return min;
 }

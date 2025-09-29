@@ -1,11 +1,12 @@
 /* Maps the same file into memory twice and verifies that the
    same data is readable in both. */
 
+#include <string.h>
+#include <syscall.h>
+
 #include "tests/lib.h"
 #include "tests/main.h"
 #include "tests/vm/sample.inc"
-#include <string.h>
-#include <syscall.h>
 
 void test_main(void) {
   char *actual[2] = {(char *)0x10000000, (char *)0x20000000};

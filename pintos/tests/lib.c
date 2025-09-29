@@ -1,4 +1,5 @@
 #include "tests/lib.h"
+
 #include <random.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -25,8 +26,7 @@ static void vmsg(const char *format, va_list args, const char *suffix) {
 void msg(const char *format, ...) {
   va_list args;
 
-  if (quiet)
-    return;
+  if (quiet) return;
   va_start(args, format);
   vmsg(format, args, "\n");
   va_end(args);
@@ -110,8 +110,7 @@ void check_file_handle(int fd, const char *file_name, const void *buf_,
     size_t block_size, ret_val;
 
     block_size = size - ofs;
-    if (block_size > sizeof block)
-      block_size = sizeof block;
+    if (block_size > sizeof block) block_size = sizeof block;
 
     ret_val = read(fd, block, block_size);
     if (ret_val != block_size)
@@ -146,15 +145,12 @@ void compare_bytes(const void *read_data_, const void *expected_data_,
   size_t i, j;
   size_t show_cnt;
 
-  if (!memcmp(read_data, expected_data, size))
-    return;
+  if (!memcmp(read_data, expected_data, size)) return;
 
   for (i = 0; i < size; i++)
-    if (read_data[i] != expected_data[i])
-      break;
+    if (read_data[i] != expected_data[i]) break;
   for (j = i + 1; j < size; j++)
-    if (read_data[j] == expected_data[j])
-      break;
+    if (read_data[j] == expected_data[j]) break;
 
   quiet = false;
   msg("%zu bytes read starting at offset %zu in \"%s\" differ "
@@ -169,7 +165,8 @@ void compare_bytes(const void *read_data_, const void *expected_data_,
   hex_dump(ofs + i, read_data + i, show_cnt, true);
   msg("Expected data:");
   hex_dump(ofs + i, expected_data + i, show_cnt, true);
-  fail("%zu bytes read starting at offset %zu in \"%s\" differ "
-       "from expected",
-       j - i, ofs + i, file_name);
+  fail(
+      "%zu bytes read starting at offset %zu in \"%s\" differ "
+      "from expected",
+      j - i, ofs + i, file_name);
 }

@@ -66,14 +66,12 @@ int vhprintf(int handle, const char *format, va_list args) {
 static void add_char(char c, void *aux_) {
   struct vhprintf_aux *aux = aux_;
   *aux->p++ = c;
-  if (aux->p >= aux->buf + sizeof aux->buf)
-    flush(aux);
+  if (aux->p >= aux->buf + sizeof aux->buf) flush(aux);
   aux->char_cnt++;
 }
 
 /* Flushes the buffer in AUX. */
 static void flush(struct vhprintf_aux *aux) {
-  if (aux->p > aux->buf)
-    write(aux->handle, aux->buf, aux->p - aux->buf);
+  if (aux->p > aux->buf) write(aux->handle, aux->buf, aux->p - aux->buf);
   aux->p = aux->buf;
 }

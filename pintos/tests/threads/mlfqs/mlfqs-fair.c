@@ -15,6 +15,9 @@
 
    (The above are computed via simulation in mlfqs.pm.) */
 
+#include <inttypes.h>
+#include <stdio.h>
+
 #include "devices/timer.h"
 #include "tests/threads/tests.h"
 #include "threads/init.h"
@@ -22,8 +25,6 @@
 #include "threads/palloc.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
-#include <inttypes.h>
-#include <stdio.h>
 
 static void test_mlfqs_fair(int thread_cnt, int nice_min, int nice_step);
 
@@ -94,8 +95,7 @@ static void load_thread(void *ti_) {
   timer_sleep(sleep_time - timer_elapsed(ti->start_time));
   while (timer_elapsed(ti->start_time) < spin_time) {
     int64_t cur_time = timer_ticks();
-    if (cur_time != last_time)
-      ti->tick_count++;
+    if (cur_time != last_time) ti->tick_count++;
     last_time = cur_time;
   }
 }

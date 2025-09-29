@@ -1,4 +1,7 @@
 #include "devices/serial.h"
+
+#include <debug.h>
+
 #include "devices/input.h"
 #include "devices/intq.h"
 #include "devices/timer.h"
@@ -6,7 +9,6 @@
 #include "threads/io.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
-#include <debug.h>
 
 /* Register definitions for the 16550A UART used in PCs.
    The 16550A has a lot more going on than shown here, but this
@@ -79,8 +81,7 @@ static void init_poll(void) {
 void serial_init_queue(void) {
   enum intr_level old_level;
 
-  if (mode == UNINIT)
-    init_poll();
+  if (mode == UNINIT) init_poll();
   ASSERT(mode == POLL);
 
   intr_register_ext(0x20 + 4, serial_interrupt, "serial");
@@ -97,8 +98,7 @@ void serial_putc(uint8_t byte) {
   if (mode != QUEUE) {
     /* If we're not set up for interrupt-driven I/O yet,
        use dumb polling to transmit a byte. */
-    if (mode == UNINIT)
-      init_poll();
+    if (mode == UNINIT) init_poll();
     putc_poll(byte);
   } else {
     /* Otherwise, queue a byte and update the interrupt enable
@@ -123,8 +123,7 @@ void serial_putc(uint8_t byte) {
    mode. */
 void serial_flush(void) {
   enum intr_level old_level = intr_disable();
-  while (!intq_empty(&txq))
-    putc_poll(intq_getc(&txq));
+  while (!intq_empty(&txq)) putc_poll(intq_getc(&txq));
   intr_set_level(old_level);
 }
 
@@ -134,8 +133,7 @@ void serial_flush(void) {
    to or removed from the buffer. */
 void serial_notify(void) {
   ASSERT(intr_get_level() == INTR_OFF);
-  if (mode == QUEUE)
-    write_ier();
+  if (mode == QUEUE) write_ier();
 }
 
 /* Configures the serial port for BPS bits per second. */
@@ -164,13 +162,11 @@ static void write_ier(void) {
 
   /* Enable transmit interrupt if we have any characters to
      transmit. */
-  if (!intq_empty(&txq))
-    ier |= IER_XMIT;
+  if (!intq_empty(&txq)) ier |= IER_XMIT;
 
   /* Enable receive interrupt if we have room to store any
      characters we receive. */
-  if (!input_full())
-    ier |= IER_RECV;
+  if (!input_full()) ier |= IER_RECV;
 
   outb(IER_REG, ier);
 }
@@ -180,8 +176,7 @@ static void write_ier(void) {
 static void putc_poll(uint8_t byte) {
   ASSERT(intr_get_level() == INTR_OFF);
 
-  while ((inb(LSR_REG) & LSR_THRE) == 0)
-    continue;
+  while ((inb(LSR_REG) & LSR_THRE) == 0) continue;
   outb(THR_REG, byte);
 }
 

@@ -1,10 +1,11 @@
 /* Grows two files in parallel and checks that their contents are
    correct. */
 
-#include "tests/lib.h"
-#include "tests/main.h"
 #include <random.h>
 #include <syscall.h>
+
+#include "tests/lib.h"
+#include "tests/main.h"
 
 #define FILE_SIZE 8143
 static char buf_a[FILE_SIZE];
@@ -15,8 +16,7 @@ static void write_some_bytes(const char *file_name, int fd, const char *buf,
   if (*ofs < FILE_SIZE) {
     size_t block_size = random_ulong() % (FILE_SIZE / 8) + 1;
     size_t ret_val;
-    if (block_size > FILE_SIZE - *ofs)
-      block_size = FILE_SIZE - *ofs;
+    if (block_size > FILE_SIZE - *ofs) block_size = FILE_SIZE - *ofs;
 
     ret_val = write(fd, buf + *ofs, block_size);
     if (ret_val != block_size)

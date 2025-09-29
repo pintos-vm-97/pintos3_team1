@@ -1,4 +1,11 @@
 #include "threads/thread.h"
+
+#include <debug.h>
+#include <random.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
+
 #include "intrinsic.h"
 #include "threads/fixed-point.h"
 #include "threads/flags.h"
@@ -7,11 +14,6 @@
 #include "threads/palloc.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
-#include <debug.h>
-#include <random.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <string.h>
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -218,21 +220,21 @@ void thread_init(void) {
 
 /* Thread를 재우고 sleep상태가 된 Thread를 sleep_list에 담아 관리 */
 void thread_sleep(int64_t ticks) {
-  struct thread *cur_thread; // 현재 Thread
-  enum intr_level old_level; // 이전 Interrupt 상태
+  struct thread *cur_thread;  // 현재 Thread
+  enum intr_level old_level;  // 이전 Interrupt 상태
 
-  old_level = intr_disable();    // Interrupt OFF
-  cur_thread = thread_current(); // 현재 Thread를 불러와 담아줌
+  old_level = intr_disable();     // Interrupt OFF
+  cur_thread = thread_current();  // 현재 Thread를 불러와 담아줌
 
-  ASSERT(cur_thread != idle_thread); // 현재 Thread가 idle_thread가 되어선 안됨
+  ASSERT(cur_thread != idle_thread);  // 현재 Thread가 idle_thread가 되어선 안됨
 
-  cur_thread->wakeup = ticks; // 현재 Thread가 일어나야 할 시간을 설정(ticks)
+  cur_thread->wakeup = ticks;  // 현재 Thread가 일어나야 할 시간을 설정(ticks)
   /* 일어날 시각 순(wakeup 오름차순)으로 정렬 삽입 */
   list_insert_ordered(&sleep_list, &cur_thread->elem, thread_cmp_wakeup, NULL);
 
-  thread_block(); // Thread를 block 상태로 변경
+  thread_block();  // Thread를 block 상태로 변경
 
-  intr_set_level(old_level); // Interrupt ON
+  intr_set_level(old_level);  // Interrupt ON
 }
 
 void thread_awake(int64_t ticks) {
@@ -280,8 +282,7 @@ void thread_tick(void) {
   struct thread *t = thread_current();
 
   /* Update statistics. */
-  if (t == idle_thread)
-    idle_ticks++;
+  if (t == idle_thread) idle_ticks++;
 #ifdef USERPROG
   else if (t->pml4 != NULL)
     user_ticks++;
@@ -290,8 +291,7 @@ void thread_tick(void) {
     kernel_ticks++;
 
   /* Enforce preemption. */
-  if (++thread_ticks >= TIME_SLICE)
-    intr_yield_on_return();
+  if (++thread_ticks >= TIME_SLICE) intr_yield_on_return();
 }
 
 /* Prints thread statistics. */
@@ -324,8 +324,7 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
 
   /* Allocate thread. */
   t = palloc_get_page(PAL_ZERO);
-  if (t == NULL)
-    return TID_ERROR;
+  if (t == NULL) return TID_ERROR;
 
   /* Initialize thread. */
   init_thread(t, name, priority);
@@ -450,14 +449,14 @@ void thread_yield(void) {
 
   ASSERT(!intr_context());
 
-  old_level = intr_disable(); // Interrupt OFF
+  old_level = intr_disable();  // Interrupt OFF
   if (curr_thread != idle_thread) {
     /* 현재 스레드를 준비 큐에 되돌릴 때도 우선순위 정렬 유지 */
     list_insert_ordered(&ready_list, &curr_thread->elem, thread_cmp_priority,
                         NULL);
   }
   do_schedule(THREAD_READY);
-  intr_set_level(old_level); // Interrupt ON (OFF하기 전 이전 상태 = old_level)
+  intr_set_level(old_level);  // Interrupt ON (OFF하기 전 이전 상태 = old_level)
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
@@ -466,10 +465,10 @@ void thread_yield(void) {
  * Advanced scheduler에서는 우선순위를 임의로 변경할 수 없다.
  */
 void thread_set_priority(int new_priority) {
-  enum intr_level old_level = intr_disable(); // Interrupt OFF
+  enum intr_level old_level = intr_disable();  // Interrupt OFF
 
   if (thread_mlfqs) {
-    intr_set_level(old_level); // Interrupt ON
+    intr_set_level(old_level);  // Interrupt ON
     return;
   }
 
@@ -480,7 +479,7 @@ void thread_set_priority(int new_priority) {
   // 더 높은 우선순위 준비 스레드가 있으면 양보
   preempt_priority();
 
-  intr_set_level(old_level); // Interrupt ON
+  intr_set_level(old_level);  // Interrupt ON
 }
 
 /* Returns the current thread's priority. */
@@ -593,26 +592,26 @@ static void init_thread(struct thread *t, const char *name, int priority) {
   t->tf.rsp = (uint64_t)t + PGSIZE - sizeof(void *);
 
   if (thread_mlfqs) {
-    if (t == initial_thread) { // 초기 thread일 경우 기본값으로 설정
+    if (t == initial_thread) {  // 초기 thread일 경우 기본값으로 설정
       t->niceness = NICE_DEFAULT;
       t->recent_cpu = RECENT_CPU_DEFAULT;
-    } else { // 초기 thread가 아닐 경우, 나머지 스레드만 thread_currnet()로부터
-             // 값을 상속받음
+    } else {  // 초기 thread가 아닐 경우, 나머지 스레드만 thread_currnet()로부터
+              // 값을 상속받음
       t->niceness = thread_current()->niceness;
       t->recent_cpu = thread_current()->recent_cpu;
     }
     mlfqs_priority(t);
     list_push_back(&all_list, &t->all_elem);
   } else {
-    t->priority = priority; // 현재 우선순위(priority)
+    t->priority = priority;  // 현재 우선순위(priority)
   }
 
   /* 우선 순위 priority */
-  t->original_priority = priority; // 원래 우선순위(priority)
+  t->original_priority = priority;  // 원래 우선순위(priority)
 
   /* donation 상태 초기화 */
   list_init(&t->donation_list);
-  t->waiting_lock = NULL; // 현재 대기중인 lock이 없음
+  t->waiting_lock = NULL;  // 현재 대기중인 lock이 없음
 
   t->magic = THREAD_MAGIC;
 
@@ -639,30 +638,31 @@ static struct thread *next_thread_to_run(void) {
 
 /* Use iretq to launch the thread */
 void do_iret(struct intr_frame *tf) {
-  __asm __volatile("movq %0, %%rsp\n"
-                   "movq 0(%%rsp),%%r15\n"
-                   "movq 8(%%rsp),%%r14\n"
-                   "movq 16(%%rsp),%%r13\n"
-                   "movq 24(%%rsp),%%r12\n"
-                   "movq 32(%%rsp),%%r11\n"
-                   "movq 40(%%rsp),%%r10\n"
-                   "movq 48(%%rsp),%%r9\n"
-                   "movq 56(%%rsp),%%r8\n"
-                   "movq 64(%%rsp),%%rsi\n"
-                   "movq 72(%%rsp),%%rdi\n"
-                   "movq 80(%%rsp),%%rbp\n"
-                   "movq 88(%%rsp),%%rdx\n"
-                   "movq 96(%%rsp),%%rcx\n"
-                   "movq 104(%%rsp),%%rbx\n"
-                   "movq 112(%%rsp),%%rax\n"
-                   "addq $120,%%rsp\n"
-                   "movw 8(%%rsp),%%ds\n"
-                   "movw (%%rsp),%%es\n"
-                   "addq $32, %%rsp\n"
-                   "iretq"
-                   :
-                   : "g"((uint64_t)tf)
-                   : "memory");
+  __asm __volatile(
+      "movq %0, %%rsp\n"
+      "movq 0(%%rsp),%%r15\n"
+      "movq 8(%%rsp),%%r14\n"
+      "movq 16(%%rsp),%%r13\n"
+      "movq 24(%%rsp),%%r12\n"
+      "movq 32(%%rsp),%%r11\n"
+      "movq 40(%%rsp),%%r10\n"
+      "movq 48(%%rsp),%%r9\n"
+      "movq 56(%%rsp),%%r8\n"
+      "movq 64(%%rsp),%%rsi\n"
+      "movq 72(%%rsp),%%rdi\n"
+      "movq 80(%%rsp),%%rbp\n"
+      "movq 88(%%rsp),%%rdx\n"
+      "movq 96(%%rsp),%%rcx\n"
+      "movq 104(%%rsp),%%rbx\n"
+      "movq 112(%%rsp),%%rax\n"
+      "addq $120,%%rsp\n"
+      "movw 8(%%rsp),%%ds\n"
+      "movw (%%rsp),%%es\n"
+      "addq $32, %%rsp\n"
+      "iretq"
+      :
+      : "g"((uint64_t)tf)
+      : "memory");
 }
 
 /* Switching the thread by activating the new thread's page
@@ -705,26 +705,26 @@ static void thread_launch(struct thread *th) {
       "movq %%rdi, 72(%%rax)\n"
       "movq %%rbp, 80(%%rax)\n"
       "movq %%rdx, 88(%%rax)\n"
-      "pop %%rbx\n" // Saved rcx
+      "pop %%rbx\n"  // Saved rcx
       "movq %%rbx, 96(%%rax)\n"
-      "pop %%rbx\n" // Saved rbx
+      "pop %%rbx\n"  // Saved rbx
       "movq %%rbx, 104(%%rax)\n"
-      "pop %%rbx\n" // Saved rax
+      "pop %%rbx\n"  // Saved rax
       "movq %%rbx, 112(%%rax)\n"
       "addq $120, %%rax\n"
       "movw %%es, (%%rax)\n"
       "movw %%ds, 8(%%rax)\n"
       "addq $32, %%rax\n"
-      "call __next\n" // read the current rip.
+      "call __next\n"  // read the current rip.
       "__next:\n"
       "pop %%rbx\n"
       "addq $(out_iret -  __next), %%rbx\n"
-      "movq %%rbx, 0(%%rax)\n" // rip
-      "movw %%cs, 8(%%rax)\n"  // cs
+      "movq %%rbx, 0(%%rax)\n"  // rip
+      "movw %%cs, 8(%%rax)\n"   // cs
       "pushfq\n"
       "popq %%rbx\n"
-      "mov %%rbx, 16(%%rax)\n" // eflags
-      "mov %%rsp, 24(%%rax)\n" // rsp
+      "mov %%rbx, 16(%%rax)\n"  // eflags
+      "mov %%rsp, 24(%%rax)\n"  // rsp
       "movw %%ss, 32(%%rax)\n"
       "mov %%rcx, %%rdi\n"
       "call do_iret\n"
@@ -813,14 +813,12 @@ void mlfqs_priority(struct thread *t) {
 
   /* recent_cpu/4는 고정소수점으로 표현되어 있으므로 div_mixed를 사용 */
   t->priority =
-      fp_to_int(add_mixed(div_mixed(t->recent_cpu, -4), // -(recent_cpu/4)
-                          PRI_MAX - t->niceness * 2     // PRI_MAX - nice*2
+      fp_to_int(add_mixed(div_mixed(t->recent_cpu, -4),  // -(recent_cpu/4)
+                          PRI_MAX - t->niceness * 2      // PRI_MAX - nice*2
                           ));
   /* 범위 보정 */
-  if (t->priority > PRI_MAX)
-    t->priority = PRI_MAX;
-  if (t->priority < PRI_MIN)
-    t->priority = PRI_MIN;
+  if (t->priority > PRI_MAX) t->priority = PRI_MAX;
+  if (t->priority < PRI_MIN) t->priority = PRI_MIN;
 }
 
 /* recent_cpu 값 계산 */
@@ -836,8 +834,8 @@ void mlfqs_recent_cpu(struct thread *t) {
 
   /* coefficient = 2*load_avg / (2*load_avg + 1) */
   t->recent_cpu = add_mixed(
-      mult_fp(div_fp(mult_mixed(load_avg, 2),              // 2*load_avg
-                     add_mixed(mult_mixed(load_avg, 2), 1) // 2*load_avg + 1
+      mult_fp(div_fp(mult_mixed(load_avg, 2),               // 2*load_avg
+                     add_mixed(mult_mixed(load_avg, 2), 1)  // 2*load_avg + 1
                      ),
               t->recent_cpu),
       t->niceness);
@@ -856,9 +854,9 @@ void mlfqs_load_avg(void) {
   }
 
   load_avg = add_fp(mult_fp(div_fp(int_to_fp(59), int_to_fp(60)),
-                            load_avg), // (59/60) * load_avg
+                            load_avg),  // (59/60) * load_avg
                     mult_mixed(div_fp(int_to_fp(1), int_to_fp(60)),
-                               ready_threads) // (1/60) * ready_threads
+                               ready_threads)  // (1/60) * ready_threads
   );
 }
 

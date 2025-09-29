@@ -2,10 +2,12 @@
    file. */
 
 #include "tests/filesys/extended/syn-rw.h"
-#include "tests/lib.h"
-#include "tests/main.h"
+
 #include <random.h>
 #include <syscall.h>
+
+#include "tests/lib.h"
+#include "tests/main.h"
 
 char buf[BUF_SIZE];
 

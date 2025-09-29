@@ -1,9 +1,10 @@
 /* Tries to remove a parent of the current directory.  This must
    fail, because that directory is non-empty. */
 
+#include <syscall.h>
+
 #include "tests/lib.h"
 #include "tests/main.h"
-#include <syscall.h>
 
 void test_main(void) {
   CHECK(mkdir("a"), "mkdir \"a\"");

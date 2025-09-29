@@ -1,9 +1,10 @@
 #ifndef FILESYS_DIRECTORY_H
 #define FILESYS_DIRECTORY_H
 
-#include "devices/disk.h"
 #include <stdbool.h>
 #include <stddef.h>
+
+#include "devices/disk.h"
 
 /* Maximum length of a file name component.
  * This is the traditional UNIX maximum length.

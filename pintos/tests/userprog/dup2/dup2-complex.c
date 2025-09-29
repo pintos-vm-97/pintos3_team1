@@ -3,9 +3,6 @@
    Written by Minkyu Jung, Jinyoung Oh <cs330_ta@casys.kaist.ac.kr>
 */
 
-#include "tests/lib.h"
-#include "tests/userprog/boundary.h"
-#include "tests/userprog/sample.inc"
 #include <debug.h>
 #include <random.h>
 #include <stdbool.h>
@@ -13,6 +10,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syscall.h>
+
+#include "tests/lib.h"
+#include "tests/userprog/boundary.h"
+#include "tests/userprog/sample.inc"
 
 char magic[] = {"Pintos is funny\n"};
 
@@ -76,7 +77,7 @@ int main(int argc UNUSED, char *argv[] UNUSED) {
   write(fd4, magic, strlen(magic));
 
   pid_t pid;
-  if (!(pid = fork("child"))) { // child
+  if (!(pid = fork("child"))) {  // child
     msg("child begin");
     close(fd1);
     close(fd2);

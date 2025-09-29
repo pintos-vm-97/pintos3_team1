@@ -21,8 +21,9 @@ void debug_backtrace(void) {
 
   if (!explained) {
     explained = true;
-    printf("The `backtrace' program can make call stacks useful.\n"
-           "Read \"Backtraces\" in the \"Debugging Tools\" chapter\n"
-           "of the Pintos documentation for more information.\n");
+    printf(
+        "The `backtrace' program can make call stacks useful.\n"
+        "Read \"Backtraces\" in the \"Debugging Tools\" chapter\n"
+        "of the Pintos documentation for more information.\n");
   }
 }

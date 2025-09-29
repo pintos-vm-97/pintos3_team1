@@ -4,13 +4,14 @@
  * First, fills the memory with with anonymous pages
  * and then tries to map a file into the page */
 
-#include "tests/lib.h"
-#include "tests/main.h"
-#include "tests/vm/large.inc"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <syscall.h>
+
+#include "tests/lib.h"
+#include "tests/main.h"
+#include "tests/vm/large.inc"
 
 void test_main(void) {
   size_t handle;

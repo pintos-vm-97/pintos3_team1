@@ -6,15 +6,16 @@
  * then check if the data is consistent
  * Lastly, frees the allocated memory. */
 
-#include "tests/lib.h"
-#include "tests/main.h"
 #include <stdint.h>
 #include <string.h>
 #include <syscall.h>
 
+#include "tests/lib.h"
+#include "tests/main.h"
+
 #define PAGE_SHIFT 12
 #define PAGE_SIZE (1 << PAGE_SHIFT)
-#define ONE_MB (1 << 20) // 1MB
+#define ONE_MB (1 << 20)  // 1MB
 #define CHUNK_SIZE (20 * ONE_MB)
 #define PAGE_COUNT (CHUNK_SIZE / PAGE_SIZE)
 
@@ -26,8 +27,7 @@ void test_main(void) {
   char *mem;
 
   for (i = 0; i < PAGE_COUNT; i++) {
-    if (!(i % 512))
-      msg("write sparsely over page %zu", i);
+    if (!(i % 512)) msg("write sparsely over page %zu", i);
     mem = (big_chunks + (i * PAGE_SIZE));
     *mem = (char)i;
   }
@@ -37,7 +37,6 @@ void test_main(void) {
     if ((char)i != *mem) {
       fail("data is inconsistent");
     }
-    if (!(i % 512))
-      msg("check consistency in page %zu", i);
+    if (!(i % 512)) msg("check consistency in page %zu", i);
   }
 }

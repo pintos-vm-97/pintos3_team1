@@ -10,8 +10,8 @@ __attribute__((always_inline)) static __inline void lcr3(uint64_t val) {
   __asm __volatile("movq %0, %%cr3" : : "r"(val));
 }
 
-__attribute__((always_inline)) static __inline void
-lgdt(const struct desc_ptr *dtr) {
+__attribute__((always_inline)) static __inline void lgdt(
+    const struct desc_ptr *dtr) {
   __asm __volatile("lgdt %0" : : "m"(*dtr));
 }
 
@@ -23,8 +23,8 @@ __attribute__((always_inline)) static __inline void ltr(uint16_t sel) {
   __asm __volatile("ltr %0" : : "r"(sel));
 }
 
-__attribute__((always_inline)) static __inline void
-lidt(const struct desc_ptr *dtr) {
+__attribute__((always_inline)) static __inline void lidt(
+    const struct desc_ptr *dtr) {
   __asm __volatile("lidt %0" : : "m"(*dtr));
 }
 

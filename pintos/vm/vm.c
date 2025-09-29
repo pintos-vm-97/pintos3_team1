@@ -1,6 +1,7 @@
 /* vm.c: Generic interface for virtual memory objects. */
 
 #include "vm/vm.h"
+
 #include "threads/malloc.h"
 #include "vm/inspect.h"
 
@@ -23,10 +24,10 @@ void vm_init(void) {
 enum vm_type page_get_type(struct page *page) {
   int ty = VM_TYPE(page->operations->type);
   switch (ty) {
-  case VM_UNINIT:
-    return VM_TYPE(page->uninit.type);
-  default:
-    return ty;
+    case VM_UNINIT:
+      return VM_TYPE(page->uninit.type);
+    default:
+      return ty;
   }
 }
 
@@ -41,7 +42,6 @@ static struct frame *vm_evict_frame(void);
 bool vm_alloc_page_with_initializer(enum vm_type type, void *upage,
                                     bool writable, vm_initializer *init,
                                     void *aux) {
-
   ASSERT(VM_TYPE(type) != VM_UNINIT)
 
   struct supplemental_page_table *spt = &thread_current()->spt;

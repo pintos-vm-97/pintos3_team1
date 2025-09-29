@@ -1,4 +1,5 @@
 #include "tests/vm/qsort.h"
+
 #include <debug.h>
 #include <random.h>
 #include <stdbool.h>
@@ -18,12 +19,10 @@ static bool is_partitioned(const unsigned char *array, size_t size,
   size_t i;
 
   for (i = 0; i < left_size; i++)
-    if (array[i] >= pivot)
-      return false;
+    if (array[i] >= pivot) return false;
 
   for (; i < size; i++)
-    if (array[i] < pivot)
-      return false;
+    if (array[i] < pivot) return false;
 
   return true;
 }
@@ -85,8 +84,7 @@ static bool is_sorted(const unsigned char *buf, size_t size) {
   size_t i;
 
   for (i = 1; i < size; i++)
-    if (buf[i - 1] > buf[i])
-      return false;
+    if (buf[i - 1] > buf[i]) return false;
 
   return true;
 }

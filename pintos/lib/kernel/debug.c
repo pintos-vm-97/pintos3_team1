@@ -1,6 +1,3 @@
-#include "devices/serial.h"
-#include "threads/init.h"
-#include "threads/interrupt.h"
 #include <console.h>
 #include <debug.h>
 #include <stdarg.h>
@@ -8,6 +5,10 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "devices/serial.h"
+#include "threads/init.h"
+#include "threads/interrupt.h"
 
 /* Halts the OS, printing the source file name, line number, and
    function name, plus a user-specific message. */
@@ -36,8 +37,7 @@ void debug_panic(const char *file, int line, const char *function,
   }
 
   serial_flush();
-  if (power_off_when_done)
-    power_off();
+  if (power_off_when_done) power_off();
   for (;;)
     ;
 }

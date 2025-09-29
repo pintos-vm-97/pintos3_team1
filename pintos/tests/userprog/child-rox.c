@@ -4,11 +4,12 @@
    Then recursively executes itself to the depth indicated by the
    first command-line argument. */
 
-#include "tests/lib.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <syscall.h>
+
+#include "tests/lib.h"
 
 static void try_write(void) {
   int handle;
@@ -30,8 +31,7 @@ int main(int argc UNUSED, char *argv[]) {
   msg("begin");
   try_write();
 
-  if (!isdigit(*argv[1]))
-    fail("bad command-line arguments");
+  if (!isdigit(*argv[1])) fail("bad command-line arguments");
   if (atoi(argv[1]) > 1) {
     char cmd[128];
     int child;
@@ -42,8 +42,7 @@ int main(int argc UNUSED, char *argv[]) {
       exec(cmd);
     }
 
-    if (child < 0)
-      fail("fork() returned %d", child);
+    if (child < 0) fail("fork() returned %d", child);
     quiet = true;
     CHECK(wait(child) == 12, "wait for \"child-rox\"");
     quiet = false;

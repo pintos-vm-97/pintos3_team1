@@ -95,13 +95,14 @@
    After 180 seconds, recent_cpu is 189.97, load_avg is 0.95.
 */
 
+#include <stdio.h>
+
 #include "devices/timer.h"
 #include "tests/threads/tests.h"
 #include "threads/init.h"
 #include "threads/malloc.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
-#include <stdio.h>
 
 /* Sensitive to assumption that recent_cpu updates happen exactly
    when timer_ticks() % TIMER_FREQ == 0. */
@@ -129,8 +130,7 @@ void test_mlfqs_recent_1(void) {
       msg("After %d seconds, recent_cpu is %d.%02d, load_avg is %d.%02d.",
           elapsed_seconds, recent_cpu / 100, recent_cpu % 100, load_avg / 100,
           load_avg % 100);
-      if (elapsed_seconds >= 180)
-        break;
+      if (elapsed_seconds >= 180) break;
     }
     last_elapsed = elapsed;
   }

@@ -1,12 +1,14 @@
 #include "devices/disk.h"
-#include "devices/timer.h"
-#include "threads/interrupt.h"
-#include "threads/io.h"
-#include "threads/synch.h"
+
 #include <ctype.h>
 #include <debug.h>
 #include <stdbool.h>
 #include <stdio.h>
+
+#include "devices/timer.h"
+#include "threads/interrupt.h"
+#include "threads/io.h"
+#include "threads/synch.h"
 
 /* The code in this file is an interface to an ATA (IDE)
    controller.  It attempts to comply to [ATA-3]. */
@@ -108,16 +110,16 @@ void disk_init(void) {
     /* Initialize channel. */
     snprintf(c->name, sizeof c->name, "hd%zu", chan_no);
     switch (chan_no) {
-    case 0:
-      c->reg_base = 0x1f0;
-      c->irq = 14 + 0x20;
-      break;
-    case 1:
-      c->reg_base = 0x170;
-      c->irq = 15 + 0x20;
-      break;
-    default:
-      NOT_REACHED();
+      case 0:
+        c->reg_base = 0x1f0;
+        c->irq = 14 + 0x20;
+        break;
+      case 1:
+        c->reg_base = 0x170;
+        c->irq = 15 + 0x20;
+        break;
+      default:
+        NOT_REACHED();
     }
     lock_init(&c->lock);
     c->expecting_interrupt = false;
@@ -143,13 +145,11 @@ void disk_init(void) {
     reset_channel(c);
 
     /* Distinguish ATA hard disks from other devices. */
-    if (check_device_type(&c->devices[0]))
-      check_device_type(&c->devices[1]);
+    if (check_device_type(&c->devices[0])) check_device_type(&c->devices[1]);
 
     /* Read hard disk identity information. */
     for (dev_no = 0; dev_no < 2; dev_no++)
-      if (c->devices[dev_no].is_ata)
-        identify_ata_device(&c->devices[dev_no]);
+      if (c->devices[dev_no].is_ata) identify_ata_device(&c->devices[dev_no]);
   }
 
   /* DO NOT MODIFY BELOW LINES. */
@@ -186,8 +186,7 @@ struct disk *disk_get(int chan_no, int dev_no) {
 
   if (chan_no < (int)CHANNEL_CNT) {
     struct disk *d = &channels[chan_no].devices[dev_no];
-    if (d->is_ata)
-      return d;
+    if (d->is_ata) return d;
   }
   return NULL;
 }
@@ -296,8 +295,7 @@ static void reset_channel(struct channel *c) {
 
     select_device(&c->devices[1]);
     for (i = 0; i < 3000; i++) {
-      if (inb(reg_nsect(c)) == 1 && inb(reg_lbal(c)) == 1)
-        break;
+      if (inb(reg_nsect(c)) == 1 && inb(reg_lbal(c)) == 1) break;
       timer_msleep(10);
     }
     wait_while_busy(&c->devices[1]);
@@ -381,13 +379,11 @@ static void print_ata_string(char *string, size_t size) {
   /* Find the last non-white, non-null character. */
   for (; size > 0; size--) {
     int c = string[(size - 1) ^ 1];
-    if (c != '\0' && !isspace(c))
-      break;
+    if (c != '\0' && !isspace(c)) break;
   }
 
   /* Print. */
-  for (i = 0; i < size; i++)
-    printf("%c", string[i ^ 1]);
+  for (i = 0; i < size; i++) printf("%c", string[i ^ 1]);
 }
 
 /* Selects device D, waiting for it to become ready, and then
@@ -442,8 +438,7 @@ static void wait_until_idle(const struct disk *d) {
   int i;
 
   for (i = 0; i < 1000; i++) {
-    if ((inb(reg_status(d->channel)) & (STA_BSY | STA_DRQ)) == 0)
-      return;
+    if ((inb(reg_status(d->channel)) & (STA_BSY | STA_DRQ)) == 0) return;
     timer_usleep(10);
   }
 
@@ -459,11 +454,9 @@ static bool wait_while_busy(const struct disk *d) {
   int i;
 
   for (i = 0; i < 3000; i++) {
-    if (i == 700)
-      printf("%s: busy, waiting...", d->name);
+    if (i == 700) printf("%s: busy, waiting...", d->name);
     if (!(inb(reg_alt_status(c)) & STA_BSY)) {
-      if (i >= 700)
-        printf("ok\n");
+      if (i >= 700) printf("ok\n");
       return (inb(reg_alt_status(c)) & STA_DRQ) != 0;
     }
     timer_msleep(10);
@@ -477,8 +470,7 @@ static bool wait_while_busy(const struct disk *d) {
 static void select_device(const struct disk *d) {
   struct channel *c = d->channel;
   uint8_t dev = DEV_MBS;
-  if (d->dev_no == 1)
-    dev |= DEV_DEV;
+  if (d->dev_no == 1) dev |= DEV_DEV;
   outb(reg_device(c), dev);
   inb(reg_alt_status(c));
   timer_nsleep(400);

@@ -1,12 +1,13 @@
 /* Checks if fork is implemented properly with copy-on-write */
 
-#include "tests/lib.h"
-#include "tests/main.h"
-#include "tests/vm/large.inc"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <syscall.h>
+
+#include "tests/lib.h"
+#include "tests/main.h"
+#include "tests/vm/large.inc"
 
 #define CHUNK_SIZE (128 * 1024)
 

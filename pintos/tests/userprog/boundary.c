@@ -3,6 +3,7 @@
    another. */
 
 #include "tests/userprog/boundary.h"
+
 #include <inttypes.h>
 #include <round.h>
 #include <string.h>
@@ -13,8 +14,7 @@ static char dst[8192];
    modifiable bytes on either side of the pointer returned. */
 void *get_boundary_area(void) {
   char *p = (char *)ROUND_UP((uintptr_t)dst, 4096);
-  if (p - dst < 2048)
-    p += 4096;
+  if (p - dst < 2048) p += 4096;
   return p;
 }
 

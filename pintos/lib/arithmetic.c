@@ -57,8 +57,7 @@ static int nlz(uint32_t x) {
     n += 2;
     x <<= 2;
   }
-  if (x <= 0x7FFFFFFF)
-    n++;
+  if (x <= 0x7FFFFFFF) n++;
   return n;
 }
 

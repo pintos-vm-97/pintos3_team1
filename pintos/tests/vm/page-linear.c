@@ -1,10 +1,11 @@
 /* Encrypts, then decrypts, 2 MB of memory and verifies that the
    values are as they should be. */
 
+#include <string.h>
+
 #include "tests/arc4.h"
 #include "tests/lib.h"
 #include "tests/main.h"
-#include <string.h>
 
 #define SIZE (5 * 1024 * 1024)
 
@@ -21,8 +22,7 @@ void test_main(void) {
   /* Check that it's all 0x5a. */
   msg("read pass");
   for (i = 0; i < SIZE; i++)
-    if (buf[i] != 0x5a)
-      fail("byte %zu != 0x5a", i);
+    if (buf[i] != 0x5a) fail("byte %zu != 0x5a", i);
 
   /* Encrypt zeros. */
   msg("read/modify/write pass one");
@@ -37,6 +37,5 @@ void test_main(void) {
   /* Check that it's all 0x5a. */
   msg("read pass");
   for (i = 0; i < SIZE; i++)
-    if (buf[i] != 0x5a)
-      fail("byte %zu != 0x5a", i);
+    if (buf[i] != 0x5a) fail("byte %zu != 0x5a", i);
 }

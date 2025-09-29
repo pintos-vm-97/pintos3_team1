@@ -1,4 +1,12 @@
 #include "userprog/process.h"
+
+#include <debug.h>
+#include <inttypes.h>
+#include <round.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -15,12 +23,6 @@
 #include "userprog/gdt.h"
 #include "userprog/syscall.h"
 #include "userprog/tss.h"
-#include <debug.h>
-#include <inttypes.h>
-#include <round.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -49,20 +51,20 @@ static void process_init(void) {
   // 새 프로세스용 파일 디스크립터 테이블을 0으로 초기화된 상태로 준비
   current->FDT = palloc_get_multiple(
       PAL_ZERO,
-      FDT_PAGES); // 사용자 프로세스의 FDT를 0으로 초기화된 페이지로 확보
+      FDT_PAGES);  // 사용자 프로세스의 FDT를 0으로 초기화된 페이지로 확보
 
   // 아직 실행 파일이 연결되지 않았으므로 기본값으로 비워둔다.
-  current->running_file = NULL; // 현재 실행 파일 포인터 초기화
+  current->running_file = NULL;  // 현재 실행 파일 포인터 초기화
 
   // 표준 입출력 0~2(stdin, stdout, stderr)를 건너뛰고, 일반 파일 fd는 3부터
   // 할당한다.
-  current->next_FD = 3; // 다음에 배정할 파일 디스크립터 시작값 지정
-  current->stdin_count = 1;  // 기본 STDIN 하나가 열려 있음을 표시
-  current->stdout_count = 1; // 기본 STDOUT 하나가 열려 있음을 표시
+  current->next_FD = 3;  // 다음에 배정할 파일 디스크립터 시작값 지정
+  current->stdin_count = 1;   // 기본 STDIN 하나가 열려 있음을 표시
+  current->stdout_count = 1;  // 기본 STDOUT 하나가 열려 있음을 표시
   current->FDT[STDIN_FILENO] =
-      syscall_get_std_file(STDIN_FILENO); // FDT[0]에 STDIN 더미 파일 객체 연결
+      syscall_get_std_file(STDIN_FILENO);  // FDT[0]에 STDIN 더미 파일 객체 연결
   current->FDT[STDOUT_FILENO] = syscall_get_std_file(
-      STDOUT_FILENO); // FDT[1]에 STDOUT 더미 파일 객체 연결
+      STDOUT_FILENO);  // FDT[1]에 STDOUT 더미 파일 객체 연결
 }
 
 /* FILE_NAME에서 불러온 "initd"라는 첫 번째 사용자 프로그램을 시작한다.
@@ -82,17 +84,16 @@ tid_t process_create_initd(const char *file_name) {
 
   /* FILE_NAME의 복사본을 만든다.
    * 그렇지 않으면 호출자와 load() 사이에 경쟁 상태(race)가 발생할 수 있다. */
-  fn_copy = palloc_get_page(0); // 0의 의미는 Kernel 쪽에서 만들어라 라는 뜻
+  fn_copy = palloc_get_page(0);  // 0의 의미는 Kernel 쪽에서 만들어라 라는 뜻
   // fn_copy는 file_name의 복사본. 즉, args-single onearg
-  if (fn_copy == NULL)
-    return TID_ERROR;
+  if (fn_copy == NULL) return TID_ERROR;
   strlcpy(fn_copy, file_name, PGSIZE);
 
   /* FILE_NAME을 실행할 새로운 스레드를 생성한다. */
-  char thread_name[16]; // thread 구조체 내부 name 크기가 char name[16]임
+  char thread_name[16];  // thread 구조체 내부 name 크기가 char name[16]임
   strlcpy(thread_name, file_name, sizeof thread_name);
   char *save_ptr;
-  char *token = strtok_r(thread_name, " ", &save_ptr); // file_name만큼만 wkfma
+  char *token = strtok_r(thread_name, " ", &save_ptr);  // file_name만큼만 wkfma
 
   if (token == NULL) {
     token = thread_name;
@@ -100,7 +101,7 @@ tid_t process_create_initd(const char *file_name) {
 
   tid = thread_create(token, PRI_DEFAULT, initd, fn_copy);
 
-  if (tid == TID_ERROR) { // TID_ERROR 는 -1
+  if (tid == TID_ERROR) {  // TID_ERROR 는 -1
     palloc_free_page(fn_copy);
   }
   return tid;
@@ -115,8 +116,7 @@ static void initd(void *f_name) {
   process_init();
   // process_exec()에서 initd(fn_copy)로 넘어왔던 fn_copy가 f_name임 args_single
   // onearg
-  if (process_exec(f_name) < 0)
-    PANIC("Fail to launch initd\n");
+  if (process_exec(f_name) < 0) PANIC("Fail to launch initd\n");
   NOT_REACHED();
 }
 
@@ -138,7 +138,7 @@ tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED) {
   // 방금 만든 자식을 부모의 children 리스트에서 찾아옴
   struct thread *child = get_child_thread(fork_tid);
   if (child == NULL) {
-    return TID_ERROR; // 리스트에서 찾지 못하면 실패로 간주 -1 return
+    return TID_ERROR;  // 리스트에서 찾지 못하면 실패로 간주 -1 return
   }
 
   // 자식이 주소 공간/파일 테이블 복제를 완료할 때까지 대기
@@ -146,8 +146,8 @@ tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED) {
 
   // 자식 초기화가 실패했다면 부모는 fork 실패로 처리
   if (child->fork_status != 0) {
-    list_remove(&child->child_elem); // 부모 children 리스트에서 제거
-    sema_up(&child->exit_sema); // 자식이 종료 루틴을 마칠 수 있게 깨움
+    list_remove(&child->child_elem);  // 부모 children 리스트에서 제거
+    sema_up(&child->exit_sema);  // 자식이 종료 루틴을 마칠 수 있게 깨움
     return TID_ERROR;
   }
 
@@ -213,17 +213,17 @@ static void __do_fork(void *aux) {
   /* 새 스레드가 사용할 FDT, FD 인덱스 등 기본 자료구조를 초기화한다. */
   process_init();
   struct file *stdin_file = syscall_get_std_file(
-      STDIN_FILENO); // 부모와 동일한 STDIN 더미 포인터 캐싱
+      STDIN_FILENO);  // 부모와 동일한 STDIN 더미 포인터 캐싱
   struct file *stdout_file = syscall_get_std_file(
-      STDOUT_FILENO); // 부모와 동일한 STDOUT 더미 포인터 캐싱
+      STDOUT_FILENO);  // 부모와 동일한 STDOUT 더미 포인터 캐싱
   for (int fd = 0; fd < MAX_FD; fd++) {
     current->FDT[fd] =
-        NULL; // 부모 상태를 그대로 채우기 위해 자식 FDT를 먼저 비워 둠
+        NULL;  // 부모 상태를 그대로 채우기 위해 자식 FDT를 먼저 비워 둠
   }
   current->stdin_count =
-      0; // 부모 복사를 통해 실제 STDIN 참조 개수를 다시 계산할 예정
+      0;  // 부모 복사를 통해 실제 STDIN 참조 개수를 다시 계산할 예정
   current->stdout_count =
-      0; // 부모 복사를 통해 실제 STDOUT 참조 개수를 다시 계산할 예정
+      0;  // 부모 복사를 통해 실제 STDOUT 참조 개수를 다시 계산할 예정
 
   /* 부모가 fork 시스템 콜을 호출하던 시점의 레지스터 값을 자식 intr_frame에
    * 그대로 복사한다. */
@@ -271,21 +271,21 @@ static void __do_fork(void *aux) {
   for (int fd = 0; fd < MAX_FD; fd++) {
     struct file *parent_file = parent->FDT[fd];
     if (parent_file == NULL) {
-      continue; // 부모가 사용하지 않은 슬롯은 넘긴다
+      continue;  // 부모가 사용하지 않은 슬롯은 넘긴다
     }
     if (parent_file == stdin_file) {
-      current->FDT[fd] = stdin_file; // STDIN 더미 포인터 공유
-      current->stdin_count++; // 자식이 보유한 STDIN 참조 수 누적
+      current->FDT[fd] = stdin_file;  // STDIN 더미 포인터 공유
+      current->stdin_count++;  // 자식이 보유한 STDIN 참조 수 누적
       continue;
     }
     if (parent_file == stdout_file) {
-      current->FDT[fd] = stdout_file; // STDOUT 더미 포인터 공유
-      current->stdout_count++; // 자식이 보유한 STDOUT 참조 수 누적
+      current->FDT[fd] = stdout_file;  // STDOUT 더미 포인터 공유
+      current->stdout_count++;  // 자식이 보유한 STDOUT 참조 수 누적
       continue;
     }
     current->FDT[fd] =
-        file_duplicate(parent_file); // 일반 파일은 별도 file 객체를 만들어
-                                     // 부모와 파일 오프셋이 섞이지 않도록 함
+        file_duplicate(parent_file);  // 일반 파일은 별도 file 객체를 만들어
+                                      // 부모와 파일 오프셋이 섞이지 않도록 함
     if (current->FDT[fd] == NULL) {
       succ = false;
       goto done;
@@ -306,7 +306,7 @@ done:
   /* 초기화 완료(성공/실패 모두)를 부모에게 알린다. */
   sema_up(&current->fork_sema);
   if (succ) {
-    do_iret(&if_); // 성공했다면 사용자 모드로 복귀하여 자식 실행을 시작한다.
+    do_iret(&if_);  // 성공했다면 사용자 모드로 복귀하여 자식 실행을 시작한다.
   }
   thread_exit();
 }
@@ -366,7 +366,7 @@ int process_exec(void *f_name) {
   argument_stack(argv, argc, &_if);
   // hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
 
-  palloc_free_page(f_name); // kernel쪽의 f_name 페이지 해제
+  palloc_free_page(f_name);  // kernel쪽의 f_name 페이지 해제
 
   /* 커널에서 유저 프로세스로 전환 - 컨텍스트 전환된 프로세스를 실행 시작한다
    * Context switching 과정의 마지막 단계, 현재 실행중인 프로세스를 다른
@@ -388,11 +388,10 @@ int process_wait(tid_t child_tid) {
 
   // 현재 스레드(부모)의 자식 리스트에서 주어진 TID를 가진 자식을 탐색
   struct thread *child_thread = get_child_thread(child_tid);
-  intr_set_level(old_level); // 인터럽트 다시 활성화
+  intr_set_level(old_level);  // 인터럽트 다시 활성화
 
   // 만약 해당 자식이 존재하지 않는다면 잘못된 접근이므로 -1 반환
-  if (child_thread == NULL)
-    return -1;
+  if (child_thread == NULL) return -1;
 
   // 자식 프로세스가 종료될 때까지 부모 프로세스를 대기 상태로 전환 (sema_down)
   sema_down(&child_thread->wait_sema);
@@ -421,7 +420,7 @@ void process_exit(void) {
     for (int fd = 0; fd < MAX_FD; fd++) {
       if (current_thread->FDT[fd] != NULL) {
         syscall_close(
-            fd); // dup_count와 STDIN/STDOUT 카운트를 반영하며 안전하게 닫기
+            fd);  // dup_count와 STDIN/STDOUT 카운트를 반영하며 안전하게 닫기
       }
     }
     // 파일 디스크럽터 테이블에 할당했던 메모리 해제
@@ -555,8 +554,7 @@ static bool load(const char *file_name, struct intr_frame *if_) {
 
   /* Allocate and activate page directory. */
   t->pml4 = pml4_create();
-  if (t->pml4 == NULL)
-    goto done;
+  if (t->pml4 == NULL) goto done;
   process_activate(thread_current());
 
   /* Open executable file. */
@@ -567,12 +565,12 @@ static bool load(const char *file_name, struct intr_frame *if_) {
   }
 
   file_deny_write(file);  // 현재 실행중인 파일 쓰기 금지
-  t->running_file = file; // 스레드의 running_file을 현재 파일로 설정
+  t->running_file = file;  // 스레드의 running_file을 현재 파일로 설정
 
   /* Read and verify executable header. */
   if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr ||
       memcmp(ehdr.e_ident, "\177ELF\2\1\1", 7) || ehdr.e_type != 2 ||
-      ehdr.e_machine != 0x3E // amd64
+      ehdr.e_machine != 0x3E  // amd64
       || ehdr.e_version != 1 || ehdr.e_phentsize != sizeof(struct Phdr) ||
       ehdr.e_phnum > 1024) {
     printf("load: %s: error loading executable\n", file_name);
@@ -584,56 +582,53 @@ static bool load(const char *file_name, struct intr_frame *if_) {
   for (i = 0; i < ehdr.e_phnum; i++) {
     struct Phdr phdr;
 
-    if (file_ofs < 0 || file_ofs > file_length(file))
-      goto done;
+    if (file_ofs < 0 || file_ofs > file_length(file)) goto done;
     file_seek(file, file_ofs);
 
-    if (file_read(file, &phdr, sizeof phdr) != sizeof phdr)
-      goto done;
+    if (file_read(file, &phdr, sizeof phdr) != sizeof phdr) goto done;
     file_ofs += sizeof phdr;
     switch (phdr.p_type) {
-    case PT_NULL:
-    case PT_NOTE:
-    case PT_PHDR:
-    case PT_STACK:
-    default:
-      /* Ignore this segment. */
-      break;
-    case PT_DYNAMIC:
-    case PT_INTERP:
-    case PT_SHLIB:
-      goto done;
-    case PT_LOAD:
-      if (validate_segment(&phdr, file)) {
-        bool writable = (phdr.p_flags & PF_W) != 0;
-        uint64_t file_page = phdr.p_offset & ~PGMASK;
-        uint64_t mem_page = phdr.p_vaddr & ~PGMASK;
-        uint64_t page_offset = phdr.p_vaddr & PGMASK;
-        uint32_t read_bytes, zero_bytes;
-        if (phdr.p_filesz > 0) {
-          /* Normal segment.
-           * Read initial part from disk and zero the rest. */
-          read_bytes = page_offset + phdr.p_filesz;
-          zero_bytes =
-              (ROUND_UP(page_offset + phdr.p_memsz, PGSIZE) - read_bytes);
-        } else {
-          /* Entirely zero.
-           * Don't read anything from disk. */
-          read_bytes = 0;
-          zero_bytes = ROUND_UP(page_offset + phdr.p_memsz, PGSIZE);
-        }
-        if (!load_segment(file, file_page, (void *)mem_page, read_bytes,
-                          zero_bytes, writable))
-          goto done;
-      } else
+      case PT_NULL:
+      case PT_NOTE:
+      case PT_PHDR:
+      case PT_STACK:
+      default:
+        /* Ignore this segment. */
+        break;
+      case PT_DYNAMIC:
+      case PT_INTERP:
+      case PT_SHLIB:
         goto done;
-      break;
+      case PT_LOAD:
+        if (validate_segment(&phdr, file)) {
+          bool writable = (phdr.p_flags & PF_W) != 0;
+          uint64_t file_page = phdr.p_offset & ~PGMASK;
+          uint64_t mem_page = phdr.p_vaddr & ~PGMASK;
+          uint64_t page_offset = phdr.p_vaddr & PGMASK;
+          uint32_t read_bytes, zero_bytes;
+          if (phdr.p_filesz > 0) {
+            /* Normal segment.
+             * Read initial part from disk and zero the rest. */
+            read_bytes = page_offset + phdr.p_filesz;
+            zero_bytes =
+                (ROUND_UP(page_offset + phdr.p_memsz, PGSIZE) - read_bytes);
+          } else {
+            /* Entirely zero.
+             * Don't read anything from disk. */
+            read_bytes = 0;
+            zero_bytes = ROUND_UP(page_offset + phdr.p_memsz, PGSIZE);
+          }
+          if (!load_segment(file, file_page, (void *)mem_page, read_bytes,
+                            zero_bytes, writable))
+            goto done;
+        } else
+          goto done;
+        break;
     }
   }
 
   /* Set up stack. */
-  if (!setup_stack(if_))
-    goto done;
+  if (!setup_stack(if_)) goto done;
 
   /* Start address. */
   if_->rip = ehdr.e_entry;
@@ -653,40 +648,32 @@ done:
  * FILE and returns true if so, false otherwise. */
 static bool validate_segment(const struct Phdr *phdr, struct file *file) {
   /* p_offset and p_vaddr must have the same page offset. */
-  if ((phdr->p_offset & PGMASK) != (phdr->p_vaddr & PGMASK))
-    return false;
+  if ((phdr->p_offset & PGMASK) != (phdr->p_vaddr & PGMASK)) return false;
 
   /* p_offset must point within FILE. */
-  if (phdr->p_offset > (uint64_t)file_length(file))
-    return false;
+  if (phdr->p_offset > (uint64_t)file_length(file)) return false;
 
   /* p_memsz must be at least as big as p_filesz. */
-  if (phdr->p_memsz < phdr->p_filesz)
-    return false;
+  if (phdr->p_memsz < phdr->p_filesz) return false;
 
   /* The segment must not be empty. */
-  if (phdr->p_memsz == 0)
-    return false;
+  if (phdr->p_memsz == 0) return false;
 
   /* The virtual memory region must both start and end within the
      user address space range. */
-  if (!is_user_vaddr((void *)phdr->p_vaddr))
-    return false;
-  if (!is_user_vaddr((void *)(phdr->p_vaddr + phdr->p_memsz)))
-    return false;
+  if (!is_user_vaddr((void *)phdr->p_vaddr)) return false;
+  if (!is_user_vaddr((void *)(phdr->p_vaddr + phdr->p_memsz))) return false;
 
   /* The region cannot "wrap around" across the kernel virtual
      address space. */
-  if (phdr->p_vaddr + phdr->p_memsz < phdr->p_vaddr)
-    return false;
+  if (phdr->p_vaddr + phdr->p_memsz < phdr->p_vaddr) return false;
 
   /* Disallow mapping page 0.
      Not only is it a bad idea to map page 0, but if we allowed
      it then user code that passed a null pointer to system calls
      could quite likely panic the kernel by way of null pointer
      assertions in memcpy(), etc. */
-  if (phdr->p_vaddr < PGSIZE)
-    return false;
+  if (phdr->p_vaddr < PGSIZE) return false;
 
   /* It's okay. */
   return true;
@@ -731,8 +718,7 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
 
     /* Get a page of memory. */
     uint8_t *kpage = palloc_get_page(PAL_USER);
-    if (kpage == NULL)
-      return false;
+    if (kpage == NULL) return false;
 
     /* Load this page. */
     if (file_read(file, kpage, page_read_bytes) != (int)page_read_bytes) {
@@ -778,17 +764,17 @@ static bool setup_stack(struct intr_frame *if_) {
 // 저장하고, 인자의 개수를 반환하는 함수 예: target = "echo hello world" → argv
 // = ["echo", "hello", "world", NULL]
 static int parse_args(char *target, char *argv[]) {
-  int argc = 0; // 인자의 개수를 세기 위한 변수
+  int argc = 0;  // 인자의 개수를 세기 위한 변수
   char *token;
-  char *save_ptr; // strtok_r에서 파싱 상태를 유지하기 위한 포인터
-                  // (reentrant-safe)
+  char *save_ptr;  // strtok_r에서 파싱 상태를 유지하기 위한 포인터
+                   // (reentrant-safe)
 
   // 첫 번째 토큰 추출. strtok_r는 문자열을 공백을 기준으로 분리
   for (token = strtok_r(target, " ", &save_ptr); token != NULL;
        token = strtok_r(NULL, " ",
-                        &save_ptr)) // 이후 토큰부터는 첫 인자에 NULL 전달
+                        &save_ptr))  // 이후 토큰부터는 첫 인자에 NULL 전달
   {
-    argv[argc++] = token; // 잘라낸 인자를 argv 배열에 저장하고 argc 증가
+    argv[argc++] = token;  // 잘라낸 인자를 argv 배열에 저장하고 argc 증가
   }
 
   // argv는 마지막에 NULL 포인터로 끝나야 exec 계열 함수에서 제대로 처리됨 (C
@@ -801,18 +787,18 @@ static int parse_args(char *target, char *argv[]) {
 
 // 사용자 프로그램의 스택을 구성하여 인자들을 전달하는 함수
 static void argument_stack(char *argv[], int argc, struct intr_frame *_if) {
-  uint64_t rsp_arr[argc]; // 각 인자 문자열의 시작 주소를 저장할 배열
+  uint64_t rsp_arr[argc];  // 각 인자 문자열의 시작 주소를 저장할 배열
 
   // 문자열을 스택에 역순으로 복사
   for (int i = argc - 1; i >= 0; i--) {
-    size_t len = strlen(argv[i]) + 1; // 문자열 길이 + 널 문자 포함
-    _if->rsp -= len;                  // 스택 아래로 공간 확보
-    rsp_arr[i] = _if->rsp; // 해당 문자열이 위치한 주소 저장
-    memcpy((void *)_if->rsp, argv[i], len); // 스택에 문자열 복사
+    size_t len = strlen(argv[i]) + 1;  // 문자열 길이 + 널 문자 포함
+    _if->rsp -= len;                   // 스택 아래로 공간 확보
+    rsp_arr[i] = _if->rsp;  // 해당 문자열이 위치한 주소 저장
+    memcpy((void *)_if->rsp, argv[i], len);  // 스택에 문자열 복사
   }
 
   // 16바이트 정렬 맞추기 (rsp를 16의 배수로 내림 정렬)
-  _if->rsp = _if->rsp & ~0xF; // 하위 4비트 0으로 마스킹 → 16의 배수
+  _if->rsp = _if->rsp & ~0xF;  // 하위 4비트 0으로 마스킹 → 16의 배수
 
   // x86-64 SysV ABI: 함수 진입 시 rsp % 16 == 8이 되도록 맞춘다.
   // 이후에 NULL(8) + argv 포인터들(8*argc) + fake return(8)을 푸시할 예정이므로
@@ -824,32 +810,33 @@ static void argument_stack(char *argv[], int argc, struct intr_frame *_if) {
   }
 
   // NULL sentinel push (argv[argc] = NULL)
-  _if->rsp -= 8; // 포인터 크기만큼 스택 아래로
-  memset((void *)_if->rsp, 0, sizeof(char *)); // 0으로 채움 (NULL)
+  _if->rsp -= 8;  // 포인터 크기만큼 스택 아래로
+  memset((void *)_if->rsp, 0, sizeof(char *));  // 0으로 채움 (NULL)
 
   // argv[i] 포인터들을 역순으로 push
   for (int i = argc - 1; i >= 0; i--) {
-    _if->rsp -= 8; // 8바이트 공간 확보
+    _if->rsp -= 8;  // 8바이트 공간 확보
     memcpy((void *)_if->rsp, &rsp_arr[i],
-           sizeof(char *)); // 각 문자열의 주소를 복사
+           sizeof(char *));  // 각 문자열의 주소를 복사
   }
 
   // 가짜 주소 fake return address (unused, just for conventional layout)
   // 실제로 쓰이지 않는 가짜 리턴 주소인데, 스택 프레임의 모양을 함수 호출
   // 규약에 맞게 유지하려고 형식적으로만 넣은 값
   _if->rsp -= 8;
-  memset((void *)_if->rsp, 0, sizeof(void *)); // 가짜 리턴 주소 = 0
+  memset((void *)_if->rsp, 0, sizeof(void *));  // 가짜 리턴 주소 = 0
 
   // 사용자 프로그램 시작 시 인자 전달을 위한 레지스터 설정
-  _if->R.rdi = argc; // 첫 번째 인자: argc
-  _if->R.rsi = _if->rsp +
-               8; // 두 번째 인자: argv (가짜 리턴 주소 다음부터가 argv[0] 배열)
+  _if->R.rdi = argc;  // 첫 번째 인자: argc
+  _if->R.rsi =
+      _if->rsp +
+      8;  // 두 번째 인자: argv (가짜 리턴 주소 다음부터가 argv[0] 배열)
 }
 
 struct thread *get_child_thread(tid_t child_tid) {
   struct thread *current_thread =
-      thread_current(); // 현재 실행 중인 스레드(=부모 스레드)를 가져옴
-  struct thread *result = NULL; // 결과를 저장할 포인터
+      thread_current();  // 현재 실행 중인 스레드(=부모 스레드)를 가져옴
+  struct thread *result = NULL;  // 결과를 저장할 포인터
 
   // 현재 스레드의 자식 리스트를 순회함
   for (struct list_elem *i = list_begin(&current_thread->children);
@@ -859,12 +846,12 @@ struct thread *get_child_thread(tid_t child_tid) {
 
     // 자식 스레드의 tid가 찾고자 하는 child_tid와 같다면
     if (t->tid == child_tid) {
-      result = t; // 찾은 자식 스레드를 result에 저장
-      break;      // 더 이상 탐색할 필요 없으므로 반복문 종료
+      result = t;  // 찾은 자식 스레드를 result에 저장
+      break;       // 더 이상 탐색할 필요 없으므로 반복문 종료
     }
   }
 
-  return result; // 찾았으면 해당 스레드 포인터 반환, 못 찾았으면 NULL 반환
+  return result;  // 찾았으면 해당 스레드 포인터 반환, 못 찾았으면 NULL 반환
 }
 
 int process_add_file(struct file *file) {
@@ -893,15 +880,15 @@ int process_add_file(struct file *file) {
 
 struct file *process_get_file(int fd) {
   struct thread *current_thread =
-      thread_current(); // 현재 실행 중인 스레드 포인터 획득
+      thread_current();  // 현재 실행 중인 스레드 포인터 획득
   if (current_thread->FDT == NULL) {
-    return NULL; // FDT가 아직 준비되지 않았다면 접근할 수 있는 파일이 없음
+    return NULL;  // FDT가 아직 준비되지 않았다면 접근할 수 있는 파일이 없음
   }
   if (fd < 0 || fd >= MAX_FD) {
-    return NULL; // 허용 범위를 벗어난 파일 디스크립터는 무효로 간주
+    return NULL;  // 허용 범위를 벗어난 파일 디스크립터는 무효로 간주
   }
   return current_thread
-      ->FDT[fd]; // 유효한 fd라면 FDT에서 대응되는 파일 포인터 반환
+      ->FDT[fd];  // 유효한 fd라면 FDT에서 대응되는 파일 포인터 반환
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel

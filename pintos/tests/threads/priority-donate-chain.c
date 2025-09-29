@@ -24,11 +24,12 @@
 
    Written by Godmar Back <gback@cs.vt.edu> */
 
+#include <stdio.h>
+
 #include "tests/threads/tests.h"
 #include "threads/init.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
-#include <stdio.h>
 
 #define NESTING_DEPTH 8
 
@@ -50,8 +51,7 @@ void test_priority_donate_chain(void) {
 
   thread_set_priority(PRI_MIN);
 
-  for (i = 0; i < NESTING_DEPTH - 1; i++)
-    lock_init(&locks[i]);
+  for (i = 0; i < NESTING_DEPTH - 1; i++) lock_init(&locks[i]);
 
   lock_acquire(&locks[0]);
   msg("%s got lock.", thread_name());
@@ -80,8 +80,7 @@ void test_priority_donate_chain(void) {
 static void donor_thread_func(void *locks_) {
   struct lock_pair *locks = locks_;
 
-  if (locks->first)
-    lock_acquire(locks->first);
+  if (locks->first) lock_acquire(locks->first);
 
   lock_acquire(locks->second);
   msg("%s got lock", thread_name());
@@ -90,8 +89,7 @@ static void donor_thread_func(void *locks_) {
   msg("%s should have priority %d. Actual priority: %d", thread_name(),
       (NESTING_DEPTH - 1) * 3, thread_get_priority());
 
-  if (locks->first)
-    lock_release(locks->first);
+  if (locks->first) lock_release(locks->first);
 
   msg("%s finishing with priority %d.", thread_name(), thread_get_priority());
 }

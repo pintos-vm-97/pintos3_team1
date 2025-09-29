@@ -7,13 +7,14 @@
    <gmh@leland.stanford.edu>, Yu Ping Hu <yph@cs.stanford.edu>.
    Modified by arens. */
 
+#include <stdio.h>
+
 #include "devices/timer.h"
 #include "tests/threads/tests.h"
 #include "threads/init.h"
 #include "threads/malloc.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
-#include <stdio.h>
 
 struct simple_thread_data {
   int id;            /* Sleeper ID. */
@@ -69,11 +70,9 @@ void test_priority_fifo(void) {
 
     ASSERT(*output >= 0 && *output < THREAD_CNT);
     d = data + *output;
-    if (cnt % THREAD_CNT == 0)
-      printf("(priority-fifo) iteration:");
+    if (cnt % THREAD_CNT == 0) printf("(priority-fifo) iteration:");
     printf(" %d", d->id);
-    if (++cnt % THREAD_CNT == 0)
-      printf("\n");
+    if (++cnt % THREAD_CNT == 0) printf("\n");
     d->iterations++;
   }
 }

@@ -1,7 +1,9 @@
 #include "filesys/file.h"
+
+#include <debug.h>
+
 #include "filesys/inode.h"
 #include "threads/malloc.h"
-#include <debug.h>
 
 /* Opens a file for the given INODE, of which it takes ownership,
  * and returns the new file.  Returns a null pointer if an
@@ -32,8 +34,7 @@ struct file *file_duplicate(struct file *file) {
   struct file *nfile = file_open(inode_reopen(file->inode));
   if (nfile) {
     nfile->pos = file->pos;
-    if (file->deny_write)
-      file_deny_write(nfile);
+    if (file->deny_write) file_deny_write(nfile);
   }
   return nfile;
 }

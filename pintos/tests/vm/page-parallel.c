@@ -1,8 +1,9 @@
 /* Runs 4 child-linear processes at once. */
 
+#include <syscall.h>
+
 #include "tests/lib.h"
 #include "tests/main.h"
-#include <syscall.h>
 
 #define CHILD_CNT 4
 
@@ -13,8 +14,7 @@ void test_main(void) {
   for (i = 0; i < CHILD_CNT; i++) {
     children[i] = fork("child-linear");
     if (children[i] == 0) {
-      if (exec("child-linear") == -1)
-        fail("failed to exec child-linear");
+      if (exec("child-linear") == -1) fail("failed to exec child-linear");
     }
   }
   for (i = 0; i < CHILD_CNT; i++) {

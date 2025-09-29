@@ -1,9 +1,11 @@
 #include "bitmap.h"
-#include "threads/malloc.h"
+
 #include <debug.h>
 #include <limits.h>
 #include <round.h>
 #include <stdio.h>
+
+#include "threads/malloc.h"
 #ifdef FILESYS
 #include "filesys/file.h"
 #endif
@@ -184,8 +186,7 @@ void bitmap_set_multiple(struct bitmap *b, size_t start, size_t cnt,
   ASSERT(start <= b->bit_cnt);
   ASSERT(start + cnt <= b->bit_cnt);
 
-  for (i = 0; i < cnt; i++)
-    bitmap_set(b, start + i, value);
+  for (i = 0; i < cnt; i++) bitmap_set(b, start + i, value);
 }
 
 /* Returns the number of bits in B between START and START + CNT,
@@ -200,8 +201,7 @@ size_t bitmap_count(const struct bitmap *b, size_t start, size_t cnt,
 
   value_cnt = 0;
   for (i = 0; i < cnt; i++)
-    if (bitmap_test(b, start + i) == value)
-      value_cnt++;
+    if (bitmap_test(b, start + i) == value) value_cnt++;
   return value_cnt;
 }
 
@@ -216,8 +216,7 @@ bool bitmap_contains(const struct bitmap *b, size_t start, size_t cnt,
   ASSERT(start + cnt <= b->bit_cnt);
 
   for (i = 0; i < cnt; i++)
-    if (bitmap_test(b, start + i) == value)
-      return true;
+    if (bitmap_test(b, start + i) == value) return true;
   return false;
 }
 
@@ -254,8 +253,7 @@ size_t bitmap_scan(const struct bitmap *b, size_t start, size_t cnt,
     size_t last = b->bit_cnt - cnt;
     size_t i;
     for (i = start; i <= last; i++)
-      if (!bitmap_contains(b, i, cnt, !value))
-        return i;
+      if (!bitmap_contains(b, i, cnt, !value)) return i;
   }
   return BITMAP_ERROR;
 }
@@ -270,8 +268,7 @@ size_t bitmap_scan(const struct bitmap *b, size_t start, size_t cnt,
 size_t bitmap_scan_and_flip(struct bitmap *b, size_t start, size_t cnt,
                             bool value) {
   size_t idx = bitmap_scan(b, start, cnt, value);
-  if (idx != BITMAP_ERROR)
-    bitmap_set_multiple(b, idx, cnt, !value);
+  if (idx != BITMAP_ERROR) bitmap_set_multiple(b, idx, cnt, !value);
   return idx;
 }
 

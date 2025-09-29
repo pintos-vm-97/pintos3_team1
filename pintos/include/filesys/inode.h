@@ -1,9 +1,10 @@
 #ifndef FILESYS_INODE_H
 #define FILESYS_INODE_H
 
+#include <stdbool.h>
+
 #include "devices/disk.h"
 #include "filesys/off_t.h"
-#include <stdbool.h>
 
 struct bitmap;
 

@@ -1,13 +1,14 @@
 /* Checks that when the alarm clock wakes up threads, the
    higher-priority threads run first. */
 
+#include <stdio.h>
+
 #include "devices/timer.h"
 #include "tests/threads/tests.h"
 #include "threads/init.h"
 #include "threads/malloc.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
-#include <stdio.h>
 
 static thread_func alarm_priority_thread;
 static int64_t wake_time;
@@ -31,15 +32,13 @@ void test_alarm_priority(void) {
 
   thread_set_priority(PRI_MIN);
 
-  for (i = 0; i < 10; i++)
-    sema_down(&wait_sema);
+  for (i = 0; i < 10; i++) sema_down(&wait_sema);
 }
 
 static void alarm_priority_thread(void *aux UNUSED) {
   /* Busy-wait until the current time changes. */
   int64_t start_time = timer_ticks();
-  while (timer_elapsed(start_time) == 0)
-    continue;
+  while (timer_elapsed(start_time) == 0) continue;
 
   /* Now we know we're at the very beginning of a timer tick, so
      we can call timer_sleep() without worrying about races

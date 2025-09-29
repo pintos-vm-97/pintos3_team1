@@ -27,10 +27,12 @@
    */
 
 #include "threads/synch.h"
-#include "threads/interrupt.h"
-#include "threads/thread.h"
+
 #include <stdio.h>
 #include <string.h>
+
+#include "threads/interrupt.h"
+#include "threads/thread.h"
 
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
@@ -183,7 +185,7 @@ void lock_init(struct lock *lock) {
   ASSERT(lock != NULL);
 
   lock->holder = NULL;
-  list_init(&lock->waiters); // lock을 기다리는 thread들을 담을 목록 초기화
+  list_init(&lock->waiters);  // lock을 기다리는 thread들을 담을 목록 초기화
   sema_init(&lock->semaphore, 1);
 }
 
@@ -248,8 +250,7 @@ bool lock_try_acquire(struct lock *lock) {
   ASSERT(!lock_held_by_current_thread(lock));
 
   success = sema_try_down(&lock->semaphore);
-  if (success)
-    lock->holder = thread_current();
+  if (success) lock->holder = thread_current();
   return success;
 }
 
@@ -269,7 +270,6 @@ void lock_release(struct lock *lock) {
   old_level = intr_disable();
 
   if (!thread_mlfqs) {
-
     lock->holder = NULL;
 
     // holder의 donation_list에서 이 lock으로부터 유입된 도네이션 항목을 제거
@@ -389,9 +389,9 @@ void cond_wait(struct condition *cond, struct lock *lock) {
 void cond_signal(struct condition *cond, struct lock *lock UNUSED) {
   ASSERT(cond != NULL);
   ASSERT(lock != NULL);
-  ASSERT(!intr_context()); // Interrupt Context에서는 호출할 수 없다
+  ASSERT(!intr_context());  // Interrupt Context에서는 호출할 수 없다
   ASSERT(lock_held_by_current_thread(
-      lock)); // Current Thread가 Lock을 가지고 있어야 함
+      lock));  // Current Thread가 Lock을 가지고 있어야 함
 
   // 대기중인 Thread가 있다면
   if (!list_empty(&cond->waiters)) {
@@ -414,8 +414,7 @@ void cond_broadcast(struct condition *cond, struct lock *lock) {
   ASSERT(cond != NULL);
   ASSERT(lock != NULL);
 
-  while (!list_empty(&cond->waiters))
-    cond_signal(cond, lock);
+  while (!list_empty(&cond->waiters)) cond_signal(cond, lock);
 }
 
 /*
@@ -444,17 +443,15 @@ bool cmp_sema_priority(const struct list_elem *a, const struct list_elem *b,
  * donation_list에서 제거 하는 함수. lock을 풀 때 donation을 정리하는 단계
  */
 void remove_with_lock(struct lock *lock, struct list *donation_list) {
-
   struct list_elem *cur = list_begin(donation_list);
 
   while (cur != list_end(donation_list)) {
-
     struct thread *t = list_entry(cur, struct thread, donation_elem);
     struct list_elem *next = list_next(cur);
 
     if (t->waiting_lock == lock) {
-      cur = list_remove(cur); // remove한 다음 업데이트 (list_remove는 remove한
-                              // 다음 요소 반환)
+      cur = list_remove(cur);  // remove한 다음 업데이트 (list_remove는 remove한
+                               // 다음 요소 반환)
     } else {
       cur = next;
     }
@@ -471,7 +468,6 @@ void refresh_priority(struct thread *t) {
   t->priority = t->original_priority;
   // donation_list가 비어있지 않다면
   if (!list_empty(&t->donation_list)) {
-
     // donation_list는 각 원소가 thread.donation_elem이므로 해당 비교자를
     // 사용한다.
     list_sort(&t->donation_list, thread_cmp_priority_donation, NULL);

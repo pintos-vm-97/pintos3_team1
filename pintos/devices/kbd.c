@@ -1,11 +1,13 @@
 #include "devices/kbd.h"
-#include "devices/input.h"
-#include "threads/interrupt.h"
-#include "threads/io.h"
+
 #include <ctype.h>
 #include <debug.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "devices/input.h"
+#include "threads/interrupt.h"
+#include "threads/io.h"
 
 /* Keyboard data register port. */
 #define DATA_REG 0x60
@@ -84,8 +86,7 @@ static void keyboard_interrupt(struct intr_frame *args UNUSED) {
 
   /* Read scancode, including second byte if prefix code. */
   code = inb(DATA_REG);
-  if (code == 0xe0)
-    code = (code << 8) | inb(DATA_REG);
+  if (code == 0xe0) code = (code << 8) | inb(DATA_REG);
 
   /* Bit 0x80 distinguishes key press from key release
      (even if there's a prefix). */
@@ -95,8 +96,7 @@ static void keyboard_interrupt(struct intr_frame *args UNUSED) {
   /* Interpret key. */
   if (code == 0x3a) {
     /* Caps Lock. */
-    if (!release)
-      caps_lock = !caps_lock;
+    if (!release) caps_lock = !caps_lock;
   } else if (map_key(invariant_keymap, code, &c) ||
              (!shift && map_key(unshifted_keymap, code, &c)) ||
              (shift && map_key(shifted_keymap, code, &c))) {
@@ -113,8 +113,7 @@ static void keyboard_interrupt(struct intr_frame *args UNUSED) {
       /* Handle Alt by setting the high bit.
          This 0x80 is unrelated to the one used to
          distinguish key press from key release. */
-      if (alt)
-        c += 0x80;
+      if (alt) c += 0x80;
 
       /* Append to keyboard buffer. */
       if (!input_full()) {

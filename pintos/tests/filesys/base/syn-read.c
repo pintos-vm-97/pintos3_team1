@@ -3,11 +3,13 @@
    be. */
 
 #include "tests/filesys/base/syn-read.h"
-#include "tests/lib.h"
-#include "tests/main.h"
+
 #include <random.h>
 #include <stdio.h>
 #include <syscall.h>
+
+#include "tests/lib.h"
+#include "tests/main.h"
 
 static char buf[BUF_SIZE];
 

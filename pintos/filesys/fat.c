@@ -1,10 +1,12 @@
 #include "filesys/fat.h"
+
+#include <stdio.h>
+#include <string.h>
+
 #include "devices/disk.h"
 #include "filesys/filesys.h"
 #include "threads/malloc.h"
 #include "threads/synch.h"
-#include <stdio.h>
-#include <string.h>
 
 /* Should be less than DISK_SECTOR_SIZE */
 struct fat_boot {
@@ -33,27 +35,23 @@ void fat_fs_init(void);
 
 void fat_init(void) {
   fat_fs = calloc(1, sizeof(struct fat_fs));
-  if (fat_fs == NULL)
-    PANIC("FAT init failed");
+  if (fat_fs == NULL) PANIC("FAT init failed");
 
   // Read boot sector from the disk
   unsigned int *bounce = malloc(DISK_SECTOR_SIZE);
-  if (bounce == NULL)
-    PANIC("FAT init failed");
+  if (bounce == NULL) PANIC("FAT init failed");
   disk_read(filesys_disk, FAT_BOOT_SECTOR, bounce);
   memcpy(&fat_fs->bs, bounce, sizeof(fat_fs->bs));
   free(bounce);
 
   // Extract FAT info
-  if (fat_fs->bs.magic != FAT_MAGIC)
-    fat_boot_create();
+  if (fat_fs->bs.magic != FAT_MAGIC) fat_boot_create();
   fat_fs_init();
 }
 
 void fat_open(void) {
   fat_fs->fat = calloc(fat_fs->fat_length, sizeof(cluster_t));
-  if (fat_fs->fat == NULL)
-    PANIC("FAT load failed");
+  if (fat_fs->fat == NULL) PANIC("FAT load failed");
 
   // Load FAT directly from the disk
   uint8_t *buffer = (uint8_t *)fat_fs->fat;
@@ -67,8 +65,7 @@ void fat_open(void) {
       bytes_read += DISK_SECTOR_SIZE;
     } else {
       uint8_t *bounce = malloc(DISK_SECTOR_SIZE);
-      if (bounce == NULL)
-        PANIC("FAT load failed");
+      if (bounce == NULL) PANIC("FAT load failed");
       disk_read(filesys_disk, fat_fs->bs.fat_start + i, bounce);
       memcpy(buffer + bytes_read, bounce, bytes_left);
       bytes_read += bytes_left;
@@ -80,8 +77,7 @@ void fat_open(void) {
 void fat_close(void) {
   // Write FAT boot sector
   uint8_t *bounce = calloc(1, DISK_SECTOR_SIZE);
-  if (bounce == NULL)
-    PANIC("FAT close failed");
+  if (bounce == NULL) PANIC("FAT close failed");
   memcpy(bounce, &fat_fs->bs, sizeof(fat_fs->bs));
   disk_write(filesys_disk, FAT_BOOT_SECTOR, bounce);
   free(bounce);
@@ -98,8 +94,7 @@ void fat_close(void) {
       bytes_wrote += DISK_SECTOR_SIZE;
     } else {
       bounce = calloc(1, DISK_SECTOR_SIZE);
-      if (bounce == NULL)
-        PANIC("FAT close failed");
+      if (bounce == NULL) PANIC("FAT close failed");
       memcpy(bounce, buffer + bytes_wrote, bytes_left);
       disk_write(filesys_disk, fat_fs->bs.fat_start + i, bounce);
       bytes_wrote += bytes_left;
@@ -115,16 +110,14 @@ void fat_create(void) {
 
   // Create FAT table
   fat_fs->fat = calloc(fat_fs->fat_length, sizeof(cluster_t));
-  if (fat_fs->fat == NULL)
-    PANIC("FAT creation failed");
+  if (fat_fs->fat == NULL) PANIC("FAT creation failed");
 
   // Set up ROOT_DIR_CLST
   fat_put(ROOT_DIR_CLUSTER, EOChain);
 
   // Fill up ROOT_DIR_CLUSTER region with 0
   uint8_t *buf = calloc(1, DISK_SECTOR_SIZE);
-  if (buf == NULL)
-    PANIC("FAT create failed due to OOM");
+  if (buf == NULL) PANIC("FAT create failed due to OOM");
   disk_write(filesys_disk, cluster_to_sector(ROOT_DIR_CLUSTER), buf);
   free(buf);
 }
@@ -144,7 +137,8 @@ void fat_boot_create(void) {
   };
 }
 
-void fat_fs_init(void) { /* TODO: Your code goes here. */ }
+void fat_fs_init(void) { /* TODO: Your code goes here. */
+}
 
 /*----------------------------------------------------------------------------*/
 /* FAT handling                                                               */
@@ -153,7 +147,8 @@ void fat_fs_init(void) { /* TODO: Your code goes here. */ }
 /* Add a cluster to the chain.
  * If CLST is 0, start a new chain.
  * Returns 0 if fails to allocate a new cluster. */
-cluster_t fat_create_chain(cluster_t clst) { /* TODO: Your code goes here. */ }
+cluster_t fat_create_chain(cluster_t clst) { /* TODO: Your code goes here. */
+}
 
 /* Remove the chain of clusters starting from CLST.
  * If PCLST is 0, assume CLST as the start of the chain. */
@@ -162,10 +157,12 @@ void fat_remove_chain(cluster_t clst, cluster_t pclst) {
 }
 
 /* Update a value in the FAT table. */
-void fat_put(cluster_t clst, cluster_t val) { /* TODO: Your code goes here. */ }
+void fat_put(cluster_t clst, cluster_t val) { /* TODO: Your code goes here. */
+}
 
 /* Fetch a value in the FAT table. */
-cluster_t fat_get(cluster_t clst) { /* TODO: Your code goes here. */ }
+cluster_t fat_get(cluster_t clst) { /* TODO: Your code goes here. */
+}
 
 /* Covert a cluster # to a sector number. */
 disk_sector_t cluster_to_sector(cluster_t clst) {

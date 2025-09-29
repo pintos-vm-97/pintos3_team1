@@ -1,12 +1,13 @@
 /* After fork, the child process will close the opened file
    and the parent will access the closed file. */
 
+#include <string.h>
+#include <syscall.h>
+
 #include "tests/lib.h"
 #include "tests/main.h"
 #include "tests/userprog/boundary.h"
 #include "tests/userprog/sample.inc"
-#include <string.h>
-#include <syscall.h>
 
 void test_main(void) {
   pid_t pid;

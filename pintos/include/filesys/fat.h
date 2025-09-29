@@ -1,12 +1,13 @@
 #ifndef FILESYS_FAT_H
 #define FILESYS_FAT_H
 
-#include "devices/disk.h"
-#include "filesys/file.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+#include "devices/disk.h"
+#include "filesys/file.h"
 
 typedef uint32_t cluster_t; /* Index of a cluster within FAT. */
 

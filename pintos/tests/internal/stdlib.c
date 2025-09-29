@@ -8,12 +8,13 @@
 */
 
 #undef NDEBUG
-#include "threads/test.h"
 #include <debug.h>
 #include <limits.h>
 #include <random.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "threads/test.h"
 
 /* Maximum number of elements in an array that we will test. */
 #define MAX_CNT 4096
@@ -37,8 +38,7 @@ void test(void) {
       int i;
 
       /* Put values 0...CNT in random order in VALUES. */
-      for (i = 0; i < cnt; i++)
-        values[i] = i;
+      for (i = 0; i < cnt; i++) values[i] = i;
       shuffle(values, cnt);
 
       /* Sort VALUES, then verify ordering. */
@@ -78,8 +78,7 @@ static int compare_ints(const void *a_, const void *b_) {
 static void verify_order(const int *array, size_t cnt) {
   int i;
 
-  for (i = 0; (size_t)i < cnt; i++)
-    ASSERT(array[i] == i);
+  for (i = 0; (size_t)i < cnt; i++) ASSERT(array[i] == i);
 }
 
 /* Checks that bsearch() works properly in ARRAY.  ARRAY must

@@ -1,11 +1,13 @@
 #include "devices/vga.h"
-#include "threads/interrupt.h"
-#include "threads/io.h"
-#include "threads/vaddr.h"
+
 #include <round.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+
+#include "threads/interrupt.h"
+#include "threads/io.h"
+#include "threads/vaddr.h"
 
 /* VGA text screen support.  See [FREEVGA] for more information. */
 
@@ -52,35 +54,32 @@ void vga_putc(int c) {
   init();
 
   switch (c) {
-  case '\n':
-    newline();
-    break;
-
-  case '\f':
-    cls();
-    break;
-
-  case '\b':
-    if (cx > 0)
-      cx--;
-    break;
-
-  case '\r':
-    cx = 0;
-    break;
-
-  case '\t':
-    cx = ROUND_UP(cx + 1, 8);
-    if (cx >= COL_CNT)
+    case '\n':
       newline();
-    break;
+      break;
 
-  default:
-    fb[cy][cx][0] = c;
-    fb[cy][cx][1] = GRAY_ON_BLACK;
-    if (++cx >= COL_CNT)
-      newline();
-    break;
+    case '\f':
+      cls();
+      break;
+
+    case '\b':
+      if (cx > 0) cx--;
+      break;
+
+    case '\r':
+      cx = 0;
+      break;
+
+    case '\t':
+      cx = ROUND_UP(cx + 1, 8);
+      if (cx >= COL_CNT) newline();
+      break;
+
+    default:
+      fb[cy][cx][0] = c;
+      fb[cy][cx][1] = GRAY_ON_BLACK;
+      if (++cx >= COL_CNT) newline();
+      break;
   }
 
   /* Update cursor position. */
@@ -93,8 +92,7 @@ void vga_putc(int c) {
 static void cls(void) {
   size_t y;
 
-  for (y = 0; y < ROW_CNT; y++)
-    clear_row(y);
+  for (y = 0; y < ROW_CNT; y++) clear_row(y);
 
   cx = cy = 0;
   move_cursor();

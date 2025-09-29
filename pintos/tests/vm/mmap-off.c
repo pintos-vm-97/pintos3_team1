@@ -1,10 +1,11 @@
 /* Tries to mmap with offset > 0. */
 
+#include <string.h>
+#include <syscall.h>
+
 #include "tests/lib.h"
 #include "tests/main.h"
 #include "tests/vm/large.inc"
-#include <string.h>
-#include <syscall.h>
 static char zeros[0x1000];
 
 void test_main(void) {

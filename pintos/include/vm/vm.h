@@ -1,7 +1,8 @@
 #ifndef VM_VM_H
 #define VM_VM_H
-#include "threads/palloc.h"
 #include <stdbool.h>
+
+#include "threads/palloc.h"
 
 enum vm_type {
   /* page not initialized */
@@ -78,9 +79,8 @@ struct page_operations {
 
 #define swap_in(page, v) (page)->operations->swap_in((page), v)
 #define swap_out(page) (page)->operations->swap_out(page)
-#define destroy(page)                                                          \
-  if ((page)->operations->destroy)                                             \
-  (page)->operations->destroy(page)
+#define destroy(page) \
+  if ((page)->operations->destroy) (page)->operations->destroy(page)
 
 /* Representation of current process's memory space.
  * We don't want to force you to obey any specific design for this struct.
@@ -100,7 +100,7 @@ void vm_init(void);
 bool vm_try_handle_fault(struct intr_frame *f, void *addr, bool user,
                          bool write, bool not_present);
 
-#define vm_alloc_page(type, upage, writable)                                   \
+#define vm_alloc_page(type, upage, writable) \
   vm_alloc_page_with_initializer((type), (upage), (writable), NULL, NULL)
 bool vm_alloc_page_with_initializer(enum vm_type type, void *upage,
                                     bool writable, vm_initializer *init,

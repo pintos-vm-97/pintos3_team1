@@ -1,8 +1,5 @@
 #include "threads/palloc.h"
-#include "threads/init.h"
-#include "threads/loader.h"
-#include "threads/synch.h"
-#include "threads/vaddr.h"
+
 #include <bitmap.h>
 #include <debug.h>
 #include <inttypes.h>
@@ -11,6 +8,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "threads/init.h"
+#include "threads/loader.h"
+#include "threads/synch.h"
+#include "threads/vaddr.h"
 
 /* Page allocator.  Hands out memory in page-size (or
    page-multiple) chunks.  See malloc.h for an allocator that
@@ -98,13 +100,11 @@ static void resolve_area_info(struct area *base_mem, struct area *ext_mem) {
             .end = end,
             .size = size,
         };
-      } else { // otherwise
+      } else {  // otherwise
         // Extend start
-        if (area->start > start)
-          area->start = start;
+        if (area->start > start) area->start = start;
         // Extend end
-        if (area->end < end)
-          area->end = end;
+        if (area->end < end) area->end = end;
         // Extend size
         area->size += size;
       }
@@ -150,37 +150,37 @@ static void populate_pools(struct area *base_mem, struct area *ext_mem) {
       }
 
       switch (state) {
-      case KERN:
-        if (rem > size_in_pg) {
-          rem -= size_in_pg;
+        case KERN:
+          if (rem > size_in_pg) {
+            rem -= size_in_pg;
+            break;
+          }
+          // generate kernel pool
+          init_pool(&kernel_pool, &free_start, region_start,
+                    start + rem * PGSIZE);
+          // Transition to the next state
+          if (rem == size_in_pg) {
+            rem = user_pages;
+            state = USER_START;
+          } else {
+            region_start = start + rem * PGSIZE;
+            rem = user_pages - size_in_pg + rem;
+            state = USER;
+          }
           break;
-        }
-        // generate kernel pool
-        init_pool(&kernel_pool, &free_start, region_start,
-                  start + rem * PGSIZE);
-        // Transition to the next state
-        if (rem == size_in_pg) {
-          rem = user_pages;
-          state = USER_START;
-        } else {
-          region_start = start + rem * PGSIZE;
-          rem = user_pages - size_in_pg + rem;
+        case USER_START:
+          region_start = start;
           state = USER;
-        }
-        break;
-      case USER_START:
-        region_start = start;
-        state = USER;
-        break;
-      case USER:
-        if (rem > size_in_pg) {
-          rem -= size_in_pg;
           break;
-        }
-        ASSERT(rem == size);
-        break;
-      default:
-        NOT_REACHED();
+        case USER:
+          if (rem > size_in_pg) {
+            rem -= size_in_pg;
+            break;
+          }
+          ASSERT(rem == size);
+          break;
+        default:
+          NOT_REACHED();
       }
     }
   }
@@ -204,8 +204,7 @@ static void populate_pools(struct area *base_mem, struct area *ext_mem) {
 
       // TODO: add 0x1000 ~ 0x200000, This is not a matter for now.
       // All the pages are unuable
-      if (end < usable_bound)
-        continue;
+      if (end < usable_bound) continue;
 
       start =
           (uint64_t)pg_round_up(start >= usable_bound ? start : usable_bound);
@@ -270,11 +269,9 @@ void *palloc_get_multiple(enum palloc_flags flags, size_t page_cnt) {
     pages = NULL;
 
   if (pages) {
-    if (flags & PAL_ZERO)
-      memset(pages, 0, PGSIZE * page_cnt);
+    if (flags & PAL_ZERO) memset(pages, 0, PGSIZE * page_cnt);
   } else {
-    if (flags & PAL_ASSERT)
-      PANIC("palloc_get: out of pages");
+    if (flags & PAL_ASSERT) PANIC("palloc_get: out of pages");
   }
 
   return pages;
@@ -297,8 +294,7 @@ void palloc_free_multiple(void *pages, size_t page_cnt) {
   size_t page_idx;
 
   ASSERT(pg_ofs(pages) == 0);
-  if (pages == NULL || page_cnt == 0)
-    return;
+  if (pages == NULL || page_cnt == 0) return;
 
   if (page_from_pool(&kernel_pool, pages))
     pool = &kernel_pool;

@@ -3,9 +3,6 @@
    Written by Minkyu Jung, Jinyoung Oh <cs330_ta@casys.kaist.ac.kr>
 */
 
-#include "tests/lib.h"
-#include "tests/userprog/boundary.h"
-#include "tests/userprog/sample.inc"
 #include <debug.h>
 #include <random.h>
 #include <stdbool.h>
@@ -13,6 +10,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syscall.h>
+
+#include "tests/lib.h"
+#include "tests/userprog/boundary.h"
+#include "tests/userprog/sample.inc"
 
 int main(int argc UNUSED, char *argv[] UNUSED) {
   test_name = "dup2-simple";

@@ -2,13 +2,14 @@
    duration, M times.  Records the wake-up order and verifies
    that it is valid. */
 
+#include <stdio.h>
+
 #include "devices/timer.h"
 #include "tests/threads/tests.h"
 #include "threads/init.h"
 #include "threads/malloc.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
-#include <stdio.h>
 
 static void test_sleep(int thread_cnt, int iterations);
 

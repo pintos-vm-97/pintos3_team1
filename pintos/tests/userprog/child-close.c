@@ -5,20 +5,20 @@
    files descriptors over exec() for fork() system calls,
    this should work well */
 
-#include "tests/lib.h"
-#include "tests/userprog/sample.inc"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <syscall.h>
+
+#include "tests/lib.h"
+#include "tests/userprog/sample.inc"
 
 int main(int argc UNUSED, char *argv[]) {
   test_name = "child-close";
 
   msg("begin");
 
-  if (!isdigit(*argv[1]))
-    fail("bad command-line arguments");
+  if (!isdigit(*argv[1])) fail("bad command-line arguments");
 
   int handle = atoi(argv[1]);
   check_file_handle(handle, "sample.txt", sample, sizeof sample - 1);

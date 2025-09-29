@@ -1,7 +1,9 @@
 #include "random.h"
-#include "debug.h"
+
 #include <stdbool.h>
 #include <stdint.h>
+
+#include "debug.h"
 
 /* RC4-based pseudo-random number generator (PRNG).
 
@@ -33,8 +35,7 @@ void random_init(unsigned seed) {
   int i;
   uint8_t j;
 
-  for (i = 0; i < 256; i++)
-    s[i] = i;
+  for (i = 0; i < 256; i++) s[i] = i;
   for (i = j = 0; i < 256; i++) {
     j += s[i] + seedp[i % sizeof seed];
     swap_byte(s + i, s + j);
@@ -48,8 +49,7 @@ void random_init(unsigned seed) {
 void random_bytes(void *buf_, size_t size) {
   uint8_t *buf;
 
-  if (!inited)
-    random_init(0);
+  if (!inited) random_init(0);
 
   for (buf = buf_; size-- > 0; buf++) {
     uint8_t s_k;

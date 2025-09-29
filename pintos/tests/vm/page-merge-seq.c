@@ -3,10 +3,11 @@
    sequence.  Then we merge the chunks and verify that the result
    is what it should be. */
 
+#include <syscall.h>
+
 #include "tests/arc4.h"
 #include "tests/lib.h"
 #include "tests/main.h"
-#include <syscall.h>
 
 /* This is the max file size for an older version of the Pintos
    file system that had 126 direct blocks each pointing to a
@@ -28,8 +29,7 @@ static void init(void) {
 
   arc4_init(&arc4, "foobar", 6);
   arc4_crypt(&arc4, buf1, sizeof buf1);
-  for (i = 0; i < sizeof buf1; i++)
-    histogram[buf1[i]]++;
+  for (i = 0; i < sizeof buf1; i++) histogram[buf1[i]]++;
 }
 
 /* Sort each chunk of buf1 using a subprocess. */
@@ -59,13 +59,11 @@ static void sort_chunks(void) {
     if (child == 0) {
       quiet = false;
       msg("child[%zu] exec", i);
-      if (exec("child-sort buffer") == -1)
-        fail("child[%zu] exec fail", i);
+      if (exec("child-sort buffer") == -1) fail("child[%zu] exec fail", i);
       quiet = true;
     } else {
       quiet = false;
-      if (wait(child) != 123)
-        fail("child[%zu] wait fail", i);
+      if (wait(child) != 123) fail("child[%zu] wait fail", i);
       msg("child[%zu] wait success", i);
       quiet = true;
 
@@ -90,8 +88,7 @@ static void merge(void) {
 
   /* Initialize merge pointers. */
   mp_left = CHUNK_CNT;
-  for (i = 0; i < CHUNK_CNT; i++)
-    mp[i] = buf1 + CHUNK_SIZE * i;
+  for (i = 0; i < CHUNK_CNT; i++) mp[i] = buf1 + CHUNK_SIZE * i;
 
   /* Merge. */
   op = buf2;
@@ -99,16 +96,14 @@ static void merge(void) {
     /* Find smallest value. */
     size_t min = 0;
     for (i = 1; i < mp_left; i++)
-      if (*mp[i] < *mp[min])
-        min = i;
+      if (*mp[i] < *mp[min]) min = i;
 
     /* Append value to buf2. */
     *op++ = *mp[min];
 
     /* Advance merge pointer.
        Delete this chunk from the set if it's emptied. */
-    if ((++mp[min] - buf1) % CHUNK_SIZE == 0)
-      mp[min] = mp[--mp_left];
+    if ((++mp[min] - buf1) % CHUNK_SIZE == 0) mp[min] = mp[--mp_left];
   }
 }
 

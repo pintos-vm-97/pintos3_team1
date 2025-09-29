@@ -1,11 +1,13 @@
 #include "userprog/exception.h"
+
+#include <inttypes.h>
+#include <stdio.h>
+
 #include "intrinsic.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "userprog/gdt.h"
 #include "userprog/syscall.h"
-#include <inttypes.h>
-#include <stdio.h>
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -75,29 +77,29 @@ static void kill(struct intr_frame *f) {
   /* The interrupt frame's code segment value tells us where the
      exception originated. */
   switch (f->cs) {
-  case SEL_UCSEG:
-    /* User's code segment, so it's a user exception, as we
-       expected.  Kill the user process.  */
-    syscall_exit(-1);
-    printf("%s: dying due to interrupt %#04llx (%s).\n", thread_name(),
-           f->vec_no, intr_name(f->vec_no));
-    intr_dump_frame(f);
-    thread_exit();
+    case SEL_UCSEG:
+      /* User's code segment, so it's a user exception, as we
+         expected.  Kill the user process.  */
+      syscall_exit(-1);
+      printf("%s: dying due to interrupt %#04llx (%s).\n", thread_name(),
+             f->vec_no, intr_name(f->vec_no));
+      intr_dump_frame(f);
+      thread_exit();
 
-  case SEL_KCSEG:
-    /* Kernel's code segment, which indicates a kernel bug.
-       Kernel code shouldn't throw exceptions.  (Page faults
-       may cause kernel exceptions--but they shouldn't arrive
-       here.)  Panic the kernel to make the point.  */
-    intr_dump_frame(f);
-    PANIC("Kernel bug - unexpected interrupt in kernel");
+    case SEL_KCSEG:
+      /* Kernel's code segment, which indicates a kernel bug.
+         Kernel code shouldn't throw exceptions.  (Page faults
+         may cause kernel exceptions--but they shouldn't arrive
+         here.)  Panic the kernel to make the point.  */
+      intr_dump_frame(f);
+      PANIC("Kernel bug - unexpected interrupt in kernel");
 
-  default:
-    /* Some other code segment?  Shouldn't happen.  Panic the
-       kernel. */
-    printf("Interrupt %#04llx (%s) in unknown segment %04x\n", f->vec_no,
-           intr_name(f->vec_no), f->cs);
-    thread_exit();
+    default:
+      /* Some other code segment?  Shouldn't happen.  Panic the
+         kernel. */
+      printf("Interrupt %#04llx (%s) in unknown segment %04x\n", f->vec_no,
+             intr_name(f->vec_no), f->cs);
+      thread_exit();
   }
 }
 
@@ -136,8 +138,7 @@ static void page_fault(struct intr_frame *f) {
 
 #ifdef VM
   /* For project 3 and later. */
-  if (vm_try_handle_fault(f, fault_addr, user, write, not_present))
-    return;
+  if (vm_try_handle_fault(f, fault_addr, user, write, not_present)) return;
 #endif
 
   /* Count page faults. */

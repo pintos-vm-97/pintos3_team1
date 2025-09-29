@@ -1,16 +1,17 @@
 /* Checks if file-mapped pages are lazy loaded  */
 
-#include "tests/lib.h"
-#include "tests/main.h"
-#include "tests/vm/small.inc"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <syscall.h>
 
+#include "tests/lib.h"
+#include "tests/main.h"
+#include "tests/vm/small.inc"
+
 #define PAGE_SIZE 4096
 #define PAGE_SHIFT 12
-#define PAGE_ALIGN_CEIL(x)                                                     \
+#define PAGE_ALIGN_CEIL(x) \
   ((x % PAGE_SIZE ? (x + PAGE_SIZE) : x) >> PAGE_SHIFT << PAGE_SHIFT)
 
 void test_main(void) {

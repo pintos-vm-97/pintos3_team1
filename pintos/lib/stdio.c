@@ -32,8 +32,7 @@ int vsnprintf(char *buffer, size_t buf_size, const char *format, va_list args) {
   __vprintf(format, args, vsnprintf_helper, &aux);
 
   /* Add null terminator. */
-  if (buf_size > 0)
-    *aux.p = '\0';
+  if (buf_size > 0) *aux.p = '\0';
 
   return aux.length;
 }
@@ -42,8 +41,7 @@ int vsnprintf(char *buffer, size_t buf_size, const char *format, va_list args) {
 static void vsnprintf_helper(char ch, void *aux_) {
   struct vsnprintf_aux *aux = aux_;
 
-  if (aux->length++ < aux->max_length)
-    *aux->p++ = ch;
+  if (aux->length++ < aux->max_length) *aux->p++ = ch;
 }
 
 /* Like printf(), except that output is stored into BUFFER,
@@ -160,147 +158,145 @@ void __vprintf(const char *format, va_list args, void (*output)(char, void *),
 
     /* Do conversion. */
     switch (*format) {
-    case 'd':
-    case 'i': {
-      /* Signed integer conversions. */
-      intmax_t value;
+      case 'd':
+      case 'i': {
+        /* Signed integer conversions. */
+        intmax_t value;
 
-      switch (c.type) {
-      case CHAR:
-        value = (signed char)va_arg(args, int);
-        break;
-      case SHORT:
-        value = (short)va_arg(args, int);
-        break;
-      case INT:
-        value = va_arg(args, int);
-        break;
-      case INTMAX:
-        value = va_arg(args, intmax_t);
-        break;
-      case LONG:
-        value = va_arg(args, long);
-        break;
-      case LONGLONG:
-        value = va_arg(args, long long);
-        break;
-      case PTRDIFFT:
-        value = va_arg(args, ptrdiff_t);
-        break;
-      case SIZET:
-        value = va_arg(args, size_t);
-        if (value > SIZE_MAX / 2)
-          value = value - SIZE_MAX - 1;
-        break;
-      default:
-        NOT_REACHED();
-      }
+        switch (c.type) {
+          case CHAR:
+            value = (signed char)va_arg(args, int);
+            break;
+          case SHORT:
+            value = (short)va_arg(args, int);
+            break;
+          case INT:
+            value = va_arg(args, int);
+            break;
+          case INTMAX:
+            value = va_arg(args, intmax_t);
+            break;
+          case LONG:
+            value = va_arg(args, long);
+            break;
+          case LONGLONG:
+            value = va_arg(args, long long);
+            break;
+          case PTRDIFFT:
+            value = va_arg(args, ptrdiff_t);
+            break;
+          case SIZET:
+            value = va_arg(args, size_t);
+            if (value > SIZE_MAX / 2) value = value - SIZE_MAX - 1;
+            break;
+          default:
+            NOT_REACHED();
+        }
 
-      format_integer(value < 0 ? -value : value, true, value < 0, &base_d, &c,
-                     output, aux);
-    } break;
+        format_integer(value < 0 ? -value : value, true, value < 0, &base_d, &c,
+                       output, aux);
+      } break;
 
-    case 'o':
-    case 'u':
-    case 'x':
-    case 'X': {
-      /* Unsigned integer conversions. */
-      uintmax_t value;
-      const struct integer_base *b;
-
-      switch (c.type) {
-      case CHAR:
-        value = (unsigned char)va_arg(args, unsigned);
-        break;
-      case SHORT:
-        value = (unsigned short)va_arg(args, unsigned);
-        break;
-      case INT:
-        value = va_arg(args, unsigned);
-        break;
-      case INTMAX:
-        value = va_arg(args, uintmax_t);
-        break;
-      case LONG:
-        value = va_arg(args, unsigned long);
-        break;
-      case LONGLONG:
-        value = va_arg(args, unsigned long long);
-        break;
-      case PTRDIFFT:
-        value = va_arg(args, ptrdiff_t);
-#if UINTMAX_MAX != PTRDIFF_MAX
-        value &= ((uintmax_t)PTRDIFF_MAX << 1) | 1;
-#endif
-        break;
-      case SIZET:
-        value = va_arg(args, size_t);
-        break;
-      default:
-        NOT_REACHED();
-      }
-
-      switch (*format) {
       case 'o':
-        b = &base_o;
-        break;
       case 'u':
-        b = &base_d;
-        break;
       case 'x':
-        b = &base_x;
+      case 'X': {
+        /* Unsigned integer conversions. */
+        uintmax_t value;
+        const struct integer_base *b;
+
+        switch (c.type) {
+          case CHAR:
+            value = (unsigned char)va_arg(args, unsigned);
+            break;
+          case SHORT:
+            value = (unsigned short)va_arg(args, unsigned);
+            break;
+          case INT:
+            value = va_arg(args, unsigned);
+            break;
+          case INTMAX:
+            value = va_arg(args, uintmax_t);
+            break;
+          case LONG:
+            value = va_arg(args, unsigned long);
+            break;
+          case LONGLONG:
+            value = va_arg(args, unsigned long long);
+            break;
+          case PTRDIFFT:
+            value = va_arg(args, ptrdiff_t);
+#if UINTMAX_MAX != PTRDIFF_MAX
+            value &= ((uintmax_t)PTRDIFF_MAX << 1) | 1;
+#endif
+            break;
+          case SIZET:
+            value = va_arg(args, size_t);
+            break;
+          default:
+            NOT_REACHED();
+        }
+
+        switch (*format) {
+          case 'o':
+            b = &base_o;
+            break;
+          case 'u':
+            b = &base_d;
+            break;
+          case 'x':
+            b = &base_x;
+            break;
+          case 'X':
+            b = &base_X;
+            break;
+          default:
+            NOT_REACHED();
+        }
+
+        format_integer(value, false, false, b, &c, output, aux);
+      } break;
+
+      case 'c': {
+        /* Treat character as single-character string. */
+        char ch = va_arg(args, int);
+        format_string(&ch, 1, &c, output, aux);
+      } break;
+
+      case 's': {
+        /* String conversion. */
+        const char *s = va_arg(args, char *);
+        if (s == NULL) s = "(null)";
+
+        /* Limit string length according to precision.
+  Note: if c.precision == -1 then strnlen() will get
+  SIZE_MAX for MAXLEN, which is just what we want. */
+        format_string(s, strnlen(s, c.precision), &c, output, aux);
+      } break;
+
+      case 'p': {
+        /* Pointer conversion.
+           Format pointers as %#x. */
+        void *p = va_arg(args, void *);
+
+        c.flags = POUND;
+        format_integer((uintptr_t)p, false, false, &base_x, &c, output, aux);
+      } break;
+
+      case 'f':
+      case 'e':
+      case 'E':
+      case 'g':
+      case 'G':
+      case 'n':
+        /* We don't support floating-point arithmetic,
+           and %n can be part of a security hole. */
+        __printf("<<no %%%c in kernel>>", output, aux, *format);
         break;
-      case 'X':
-        b = &base_X;
-        break;
+
       default:
-        NOT_REACHED();
-      }
-
-      format_integer(value, false, false, b, &c, output, aux);
-    } break;
-
-    case 'c': {
-      /* Treat character as single-character string. */
-      char ch = va_arg(args, int);
-      format_string(&ch, 1, &c, output, aux);
-    } break;
-
-    case 's': {
-      /* String conversion. */
-      const char *s = va_arg(args, char *);
-      if (s == NULL)
-        s = "(null)";
-
-      /* Limit string length according to precision.
-Note: if c.precision == -1 then strnlen() will get
-SIZE_MAX for MAXLEN, which is just what we want. */
-      format_string(s, strnlen(s, c.precision), &c, output, aux);
-    } break;
-
-    case 'p': {
-      /* Pointer conversion.
-         Format pointers as %#x. */
-      void *p = va_arg(args, void *);
-
-      c.flags = POUND;
-      format_integer((uintptr_t)p, false, false, &base_x, &c, output, aux);
-    } break;
-
-    case 'f':
-    case 'e':
-    case 'E':
-    case 'g':
-    case 'G':
-    case 'n':
-      /* We don't support floating-point arithmetic,
-         and %n can be part of a security hole. */
-      __printf("<<no %%%c in kernel>>", output, aux, *format);
-      break;
-
-    default:
-      __printf("<<no %%%c conversion>>", output, aux, *format);
-      break;
+        __printf("<<no %%%c conversion>>", output, aux, *format);
+        break;
     }
   }
 }
@@ -316,34 +312,32 @@ static const char *parse_conversion(const char *format,
   c->flags = 0;
   for (;;) {
     switch (*format++) {
-    case '-':
-      c->flags |= MINUS;
-      break;
-    case '+':
-      c->flags |= PLUS;
-      break;
-    case ' ':
-      c->flags |= SPACE;
-      break;
-    case '#':
-      c->flags |= POUND;
-      break;
-    case '0':
-      c->flags |= ZERO;
-      break;
-    case '\'':
-      c->flags |= GROUP;
-      break;
-    default:
-      format--;
-      goto not_a_flag;
+      case '-':
+        c->flags |= MINUS;
+        break;
+      case '+':
+        c->flags |= PLUS;
+        break;
+      case ' ':
+        c->flags |= SPACE;
+        break;
+      case '#':
+        c->flags |= POUND;
+        break;
+      case '0':
+        c->flags |= ZERO;
+        break;
+      case '\'':
+        c->flags |= GROUP;
+        break;
+      default:
+        format--;
+        goto not_a_flag;
     }
   }
 not_a_flag:
-  if (c->flags & MINUS)
-    c->flags &= ~ZERO;
-  if (c->flags & PLUS)
-    c->flags &= ~SPACE;
+  if (c->flags & MINUS) c->flags &= ~ZERO;
+  if (c->flags & PLUS) c->flags &= ~SPACE;
 
   /* Parse field width. */
   c->width = 0;
@@ -351,8 +345,7 @@ not_a_flag:
     format++;
     c->width = va_arg(*args, int);
   } else {
-    for (; isdigit(*format); format++)
-      c->width = c->width * 10 + *format - '0';
+    for (; isdigit(*format); format++) c->width = c->width * 10 + *format - '0';
   }
   if (c->width < 0) {
     c->width = -c->width;
@@ -371,46 +364,44 @@ not_a_flag:
       for (; isdigit(*format); format++)
         c->precision = c->precision * 10 + *format - '0';
     }
-    if (c->precision < 0)
-      c->precision = -1;
+    if (c->precision < 0) c->precision = -1;
   }
-  if (c->precision >= 0)
-    c->flags &= ~ZERO;
+  if (c->precision >= 0) c->flags &= ~ZERO;
 
   /* Parse type. */
   c->type = INT;
   switch (*format++) {
-  case 'h':
-    if (*format == 'h') {
-      format++;
-      c->type = CHAR;
-    } else
-      c->type = SHORT;
-    break;
+    case 'h':
+      if (*format == 'h') {
+        format++;
+        c->type = CHAR;
+      } else
+        c->type = SHORT;
+      break;
 
-  case 'j':
-    c->type = INTMAX;
-    break;
+    case 'j':
+      c->type = INTMAX;
+      break;
 
-  case 'l':
-    if (*format == 'l') {
-      format++;
-      c->type = LONGLONG;
-    } else
-      c->type = LONG;
-    break;
+    case 'l':
+      if (*format == 'l') {
+        format++;
+        c->type = LONGLONG;
+      } else
+        c->type = LONG;
+      break;
 
-  case 't':
-    c->type = PTRDIFFT;
-    break;
+    case 't':
+      c->type = PTRDIFFT;
+      break;
 
-  case 'z':
-    c->type = SIZET;
-    break;
+    case 'z':
+      c->type = SIZET;
+      break;
 
-  default:
-    format--;
-    break;
+    default:
+      format--;
+      break;
   }
 
   return format;
@@ -471,38 +462,30 @@ static void format_integer(uintmax_t value, bool is_signed, bool negative,
      If the # flag is used with base 8, the result must always
      begin with a zero. */
   precision = c->precision < 0 ? 1 : c->precision;
-  while (cp - buf < precision && cp < buf + sizeof buf - 1)
-    *cp++ = '0';
+  while (cp - buf < precision && cp < buf + sizeof buf - 1) *cp++ = '0';
   if ((c->flags & POUND) && b->base == 8 && (cp == buf || cp[-1] != '0'))
     *cp++ = '0';
 
   /* Calculate number of pad characters to fill field width. */
   pad_cnt = c->width - (cp - buf) - (x ? 2 : 0) - (sign != 0);
-  if (pad_cnt < 0)
-    pad_cnt = 0;
+  if (pad_cnt < 0) pad_cnt = 0;
 
   /* Do output. */
-  if ((c->flags & (MINUS | ZERO)) == 0)
-    output_dup(' ', pad_cnt, output, aux);
-  if (sign)
-    output(sign, aux);
+  if ((c->flags & (MINUS | ZERO)) == 0) output_dup(' ', pad_cnt, output, aux);
+  if (sign) output(sign, aux);
   if (x) {
     output('0', aux);
     output(x, aux);
   }
-  if (c->flags & ZERO)
-    output_dup('0', pad_cnt, output, aux);
-  while (cp > buf)
-    output(*--cp, aux);
-  if (c->flags & MINUS)
-    output_dup(' ', pad_cnt, output, aux);
+  if (c->flags & ZERO) output_dup('0', pad_cnt, output, aux);
+  while (cp > buf) output(*--cp, aux);
+  if (c->flags & MINUS) output_dup(' ', pad_cnt, output, aux);
 }
 
 /* Writes CH to OUTPUT with auxiliary data AUX, CNT times. */
 static void output_dup(char ch, size_t cnt, void (*output)(char, void *),
                        void *aux) {
-  while (cnt-- > 0)
-    output(ch, aux);
+  while (cnt-- > 0) output(ch, aux);
 }
 
 /* Formats the LENGTH characters starting at STRING according to
@@ -514,8 +497,7 @@ static void format_string(const char *string, int length,
   int i;
   if (c->width > length && (c->flags & MINUS) == 0)
     output_dup(' ', c->width - length, output, aux);
-  for (i = 0; i < length; i++)
-    output(string[i], aux);
+  for (i = 0; i < length; i++) output(string[i], aux);
   if (c->width > length && (c->flags & MINUS) != 0)
     output_dup(' ', c->width - length, output, aux);
 }
@@ -547,26 +529,21 @@ void hex_dump(uintptr_t ofs, const void *buf_, size_t size, bool ascii) {
     /* Number of bytes on this line. */
     start = ofs % per_line;
     end = per_line;
-    if (end - start > size)
-      end = start + size;
+    if (end - start > size) end = start + size;
     n = end - start;
 
     /* Print line. */
     printf("%016llx  ", (uintmax_t)ROUND_DOWN(ofs, per_line));
-    for (i = 0; i < start; i++)
-      printf("   ");
+    for (i = 0; i < start; i++) printf("   ");
     for (; i < end; i++)
       printf("%02hhx%c", buf[i - start], i == per_line / 2 - 1 ? '-' : ' ');
     if (ascii) {
-      for (; i < per_line; i++)
-        printf("   ");
+      for (; i < per_line; i++) printf("   ");
       printf("|");
-      for (i = 0; i < start; i++)
-        printf(" ");
+      for (i = 0; i < start; i++) printf(" ");
       for (; i < end; i++)
         printf("%c", isprint(buf[i - start]) ? buf[i - start] : '.');
-      for (; i < per_line; i++)
-        printf(" ");
+      for (; i < per_line; i++) printf(" ");
       printf("|");
     }
     printf("\n");

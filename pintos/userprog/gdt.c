@@ -1,10 +1,12 @@
 #include "userprog/gdt.h"
+
+#include <debug.h>
+
 #include "intrinsic.h"
 #include "threads/mmu.h"
 #include "threads/palloc.h"
 #include "threads/vaddr.h"
 #include "userprog/tss.h"
-#include <debug.h>
 
 /* The Global Descriptor Table (GDT).
  *
@@ -56,11 +58,20 @@ struct segment_descriptor64 {
   unsigned res2 : 16;
 };
 
-#define SEG64(type, base, lim, dpl)                                            \
-  (struct segment_desc) {                                                      \
-    ((lim) >> 12) & 0xffff, (base)&0xffff, ((base) >> 16) & 0xff, type, 1,     \
-        dpl, 1, (unsigned)(lim) >> 28, 0, 1, 0, 1, (unsigned)(base) >> 24      \
-  }
+#define SEG64(type, base, lim, dpl)             \
+  (struct segment_desc){((lim) >> 12) & 0xffff, \
+                        (base) & 0xffff,        \
+                        ((base) >> 16) & 0xff,  \
+                        type,                   \
+                        1,                      \
+                        dpl,                    \
+                        1,                      \
+                        (unsigned)(lim) >> 28,  \
+                        0,                      \
+                        1,                      \
+                        0,                      \
+                        1,                      \
+                        (unsigned)(base) >> 24}
 
 static struct segment_desc gdt[SEL_CNT] = {
     [SEL_NULL >> 3] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -85,7 +96,7 @@ void gdt_init(void) {
 
   *tss_desc = (struct segment_descriptor64){
       .lim_15_0 = (uint64_t)(sizeof(struct task_state)) & 0xffff,
-      .base_15_0 = (uint64_t)(tss)&0xffff,
+      .base_15_0 = (uint64_t)(tss) & 0xffff,
       .base_23_16 = ((uint64_t)(tss) >> 16) & 0xff,
       .type = 0x9,
       .s = 0,
@@ -108,12 +119,13 @@ void gdt_init(void) {
   asm volatile("movw %%ax, %%es" ::"a"(SEL_KDSEG));
   asm volatile("movw %%ax, %%ds" ::"a"(SEL_KDSEG));
   asm volatile("movw %%ax, %%ss" ::"a"(SEL_KDSEG));
-  asm volatile("pushq %%rbx\n"
-               "movabs $1f, %%rax\n"
-               "pushq %%rax\n"
-               "lretq\n"
-               "1:\n" ::"b"(SEL_KCSEG)
-               : "cc", "memory");
+  asm volatile(
+      "pushq %%rbx\n"
+      "movabs $1f, %%rax\n"
+      "pushq %%rax\n"
+      "lretq\n"
+      "1:\n" ::"b"(SEL_KCSEG)
+      : "cc", "memory");
   /* Kill the local descriptor table */
   lldt(0);
 }

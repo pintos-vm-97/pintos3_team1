@@ -1,10 +1,11 @@
 /* Verifies that mapping over the stack segment is disallowed. */
 
-#include "tests/lib.h"
-#include "tests/main.h"
 #include <round.h>
 #include <stdint.h>
 #include <syscall.h>
+
+#include "tests/lib.h"
+#include "tests/main.h"
 
 void test_main(void) {
   int handle;

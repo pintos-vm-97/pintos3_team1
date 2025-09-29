@@ -1,10 +1,11 @@
 /* Verifies that mapping over the code segment is disallowed. */
 
-#include "tests/lib.h"
-#include "tests/main.h"
 #include <round.h>
 #include <stdint.h>
 #include <syscall.h>
+
+#include "tests/lib.h"
+#include "tests/main.h"
 
 void test_main(void) {
   uintptr_t test_main_page = ROUND_DOWN((uintptr_t)test_main, 4096);

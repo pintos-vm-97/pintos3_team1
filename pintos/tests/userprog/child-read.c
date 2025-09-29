@@ -5,14 +5,15 @@
    files descriptors over exec() for fork() system calls,
    this should work well */
 
-#include "tests/lib.h"
-#include "tests/userprog/boundary.h"
-#include "tests/userprog/sample.inc"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syscall.h>
+
+#include "tests/lib.h"
+#include "tests/userprog/boundary.h"
+#include "tests/userprog/sample.inc"
 
 int main(int argc UNUSED, char *argv[]) {
   test_name = "child-read";
@@ -22,8 +23,7 @@ int main(int argc UNUSED, char *argv[]) {
   char *buffer;
   msg("begin");
 
-  if (!isdigit(*argv[1]))
-    fail("bad command-line arguments");
+  if (!isdigit(*argv[1])) fail("bad command-line arguments");
 
   handle1 = atoi(argv[1]);
   CHECK((handle2 = open("sample.txt")) > 1 && handle2 != handle1,

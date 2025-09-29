@@ -11,20 +11,20 @@ static bool make_tar_archive(const char *archive_name, char *files[],
                              size_t file_cnt);
 
 int main(int argc, char *argv[]) {
-  if (argc < 3)
-    usage();
+  if (argc < 3) usage();
 
   return (make_tar_archive(argv[1], argv + 2, argc - 2) ? EXIT_SUCCESS
                                                         : EXIT_FAILURE);
 }
 
 static void usage(void) {
-  printf("tar, tar archive creator\n"
-         "Usage: tar ARCHIVE FILE...\n"
-         "where ARCHIVE is the tar archive to create\n"
-         "  and FILE... is a list of files or directories to put into it.\n"
-         "(ARCHIVE itself will not be included in the archive, even if it\n"
-         "is in a directory to be archived.)\n");
+  printf(
+      "tar, tar archive creator\n"
+      "Usage: tar ARCHIVE FILE...\n"
+      "where ARCHIVE is the tar archive to create\n"
+      "  and FILE... is a list of files or directories to put into it.\n"
+      "(ARCHIVE itself will not be included in the archive, even if it\n"
+      "is in a directory to be archived.)\n");
   exit(EXIT_FAILURE);
 }
 
@@ -124,8 +124,7 @@ static bool archive_ordinary_file(const char *file_name, int file_fd,
     }
 
     memset(buf + bytes_read, 0, 512 - bytes_read);
-    if (!do_write(archive_fd, buf, 512, write_error))
-      success = false;
+    if (!do_write(archive_fd, buf, 512, write_error)) success = false;
 
     file_size -= chunk_size;
   }
@@ -193,8 +192,7 @@ static bool write_header(const char *file_name, char type_flag, int size,
 
   /* Compute and fill in final checksum. */
   chksum = 0;
-  for (i = 0; i < 512; i++)
-    chksum += (uint8_t)header[i];
+  for (i = 0; i < 512; i++) chksum += (uint8_t)header[i];
   snprintf(header + 148, 8, "%07o", chksum);
 
   /* Write header. */

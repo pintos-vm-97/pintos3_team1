@@ -1,8 +1,9 @@
-#include "tests/lib.h"
-#include "tests/main.h"
 #include <random.h>
 #include <stdio.h>
 #include <syscall.h>
+
+#include "tests/lib.h"
+#include "tests/main.h"
 #define TEST_SIZE 4096
 
 static const char file_name[] = "data";
@@ -25,8 +26,7 @@ void test_main(void) {
   seek(fd, 0);
   for (int i = 0; i < TEST_SIZE; i++) {
     read(fd, &c, 1);
-    if (buf[i] != c)
-      fail("file content mismatch in %d : %x %x", i, buf[i], c);
+    if (buf[i] != c) fail("file content mismatch in %d : %x %x", i, buf[i], c);
     seek(fd, i);
     c = 'a';
     write(fd, &c, 1);
@@ -35,8 +35,7 @@ void test_main(void) {
   seek(fd, 0);
   for (int i = 0; i < TEST_SIZE; i++) {
     read(fd, &c, 1);
-    if (c != 'a')
-      fail("file content mismatch in %d : %x %x", i, buf[i], c);
+    if (c != 'a') fail("file content mismatch in %d : %x %x", i, buf[i], c);
   }
 
   CHECK(get_fs_disk_read_cnt() <= read_cnt, "check read_cnt");

@@ -1,4 +1,10 @@
 #include "threads/interrupt.h"
+
+#include <debug.h>
+#include <inttypes.h>
+#include <stdint.h>
+#include <stdio.h>
+
 #include "devices/timer.h"
 #include "intrinsic.h"
 #include "threads/flags.h"
@@ -7,10 +13,6 @@
 #include "threads/mmu.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
-#include <debug.h>
-#include <inttypes.h>
-#include <stdint.h>
-#include <stdio.h>
 #ifdef USERPROG
 #include "userprog/gdt.h"
 #endif
@@ -34,15 +36,15 @@
    Interrupt-Handler Procedure" for discussion. */
 
 struct gate {
-  unsigned off_15_0 : 16;  // low 16 bits of offset in segment
-  unsigned ss : 16;        // segment selector
-  unsigned ist : 3;        // # args, 0 for interrupt/trap gates
-  unsigned rsv1 : 5;       // reserved(should be zero I guess)
-  unsigned type : 4;       // type(STS_{TG,IG32,TG32})
-  unsigned s : 1;          // must be 0 (system)
-  unsigned dpl : 2;        // descriptor(meaning new) privilege level
-  unsigned p : 1;          // Present
-  unsigned off_31_16 : 16; // high bits of offset in segment
+  unsigned off_15_0 : 16;   // low 16 bits of offset in segment
+  unsigned ss : 16;         // segment selector
+  unsigned ist : 3;         // # args, 0 for interrupt/trap gates
+  unsigned rsv1 : 5;        // reserved(should be zero I guess)
+  unsigned type : 4;        // type(STS_{TG,IG32,TG32})
+  unsigned s : 1;           // must be 0 (system)
+  unsigned dpl : 2;         // descriptor(meaning new) privilege level
+  unsigned p : 1;           // Present
+  unsigned off_31_16 : 16;  // high bits of offset in segment
   uint32_t off_32_63;
   uint32_t rsv2;
 };
@@ -56,24 +58,24 @@ static struct gate idt[INTR_CNT];
 static struct desc_ptr idt_desc = {.size = sizeof(idt) - 1,
                                    .address = (uint64_t)idt};
 
-#define make_gate(g, function, d, t)                                           \
-  {                                                                            \
-    ASSERT((function) != NULL);                                                \
-    ASSERT((d) >= 0 && (d) <= 3);                                              \
-    ASSERT((t) >= 0 && (t) <= 15);                                             \
-    *(g) = (struct gate){                                                      \
-        .off_15_0 = (uint64_t)(function)&0xffff,                               \
-        .ss = SEL_KCSEG,                                                       \
-        .ist = 0,                                                              \
-        .rsv1 = 0,                                                             \
-        .type = (t),                                                           \
-        .s = 0,                                                                \
-        .dpl = (d),                                                            \
-        .p = 1,                                                                \
-        .off_31_16 = ((uint64_t)(function) >> 16) & 0xffff,                    \
-        .off_32_63 = ((uint64_t)(function) >> 32) & 0xffffffff,                \
-        .rsv2 = 0,                                                             \
-    };                                                                         \
+#define make_gate(g, function, d, t)                            \
+  {                                                             \
+    ASSERT((function) != NULL);                                 \
+    ASSERT((d) >= 0 && (d) <= 3);                               \
+    ASSERT((t) >= 0 && (t) <= 15);                              \
+    *(g) = (struct gate){                                       \
+        .off_15_0 = (uint64_t)(function) & 0xffff,              \
+        .ss = SEL_KCSEG,                                        \
+        .ist = 0,                                               \
+        .rsv1 = 0,                                              \
+        .type = (t),                                            \
+        .s = 0,                                                 \
+        .dpl = (d),                                             \
+        .p = 1,                                                 \
+        .off_31_16 = ((uint64_t)(function) >> 16) & 0xffff,     \
+        .off_32_63 = ((uint64_t)(function) >> 32) & 0xffffffff, \
+        .rsv2 = 0,                                              \
+    };                                                          \
   }
 
 /* Creates an interrupt gate that invokes FUNCTION with the given DPL. */
@@ -298,8 +300,7 @@ static void pic_end_of_interrupt(int irq) {
   outb(0x20, 0x20);
 
   /* Acknowledge slave PIC if this is a slave interrupt. */
-  if (irq >= 0x28)
-    outb(0xa0, 0x20);
+  if (irq >= 0x28) outb(0xa0, 0x20);
 }
 /* Interrupt handlers. */
 
@@ -347,8 +348,7 @@ void intr_handler(struct intr_frame *frame) {
     in_external_intr = false;
     pic_end_of_interrupt(frame->vec_no);
 
-    if (yield_on_return)
-      thread_yield();
+    if (yield_on_return) thread_yield();
   }
 }
 

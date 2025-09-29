@@ -1,11 +1,12 @@
+#include <console.h>
+#include <stdarg.h>
+#include <stdio.h>
+
 #include "devices/serial.h"
 #include "devices/vga.h"
 #include "threads/init.h"
 #include "threads/interrupt.h"
 #include "threads/synch.h"
-#include <console.h>
-#include <stdarg.h>
-#include <stdio.h>
 
 static void vprintf_helper(char, void *);
 static void putchar_have_lock(uint8_t c);
@@ -119,8 +120,7 @@ int vprintf(const char *format, va_list args) {
    character. */
 int puts(const char *s) {
   acquire_console();
-  while (*s != '\0')
-    putchar_have_lock(*s++);
+  while (*s != '\0') putchar_have_lock(*s++);
   putchar_have_lock('\n');
   release_console();
 
@@ -130,8 +130,7 @@ int puts(const char *s) {
 /* Writes the N characters in BUFFER to the console. */
 void putbuf(const char *buffer, size_t n) {
   acquire_console();
-  while (n-- > 0)
-    putchar_have_lock(*buffer++);
+  while (n-- > 0) putchar_have_lock(*buffer++);
   release_console();
 }
 

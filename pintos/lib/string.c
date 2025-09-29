@@ -10,8 +10,7 @@ void *memcpy(void *dst_, const void *src_, size_t size) {
   ASSERT(dst != NULL || size == 0);
   ASSERT(src != NULL || size == 0);
 
-  while (size-- > 0)
-    *dst++ = *src++;
+  while (size-- > 0) *dst++ = *src++;
 
   return dst_;
 }
@@ -26,13 +25,11 @@ void *memmove(void *dst_, const void *src_, size_t size) {
   ASSERT(src != NULL || size == 0);
 
   if (dst < src) {
-    while (size-- > 0)
-      *dst++ = *src++;
+    while (size-- > 0) *dst++ = *src++;
   } else {
     dst += size;
     src += size;
-    while (size-- > 0)
-      *--dst = *--src;
+    while (size-- > 0) *--dst = *--src;
   }
 
   return dst;
@@ -50,8 +47,7 @@ int memcmp(const void *a_, const void *b_, size_t size) {
   ASSERT(b != NULL || size == 0);
 
   for (; size-- > 0; a++, b++)
-    if (*a != *b)
-      return *a > *b ? +1 : -1;
+    if (*a != *b) return *a > *b ? +1 : -1;
   return 0;
 }
 
@@ -85,8 +81,7 @@ void *memchr(const void *block_, int ch_, size_t size) {
   ASSERT(block != NULL || size == 0);
 
   for (; size-- > 0; block++)
-    if (*block == ch)
-      return (void *)block;
+    if (*block == ch) return (void *)block;
 
   return NULL;
 }
@@ -115,8 +110,7 @@ size_t strcspn(const char *string, const char *stop) {
   size_t length;
 
   for (length = 0; string[length] != '\0'; length++)
-    if (strchr(stop, string[length]) != NULL)
-      break;
+    if (strchr(stop, string[length]) != NULL) break;
   return length;
 }
 
@@ -125,8 +119,7 @@ size_t strcspn(const char *string, const char *stop) {
    null pointer. */
 char *strpbrk(const char *string, const char *stop) {
   for (; *string != '\0'; string++)
-    if (strchr(stop, *string) != NULL)
-      return (char *)string;
+    if (strchr(stop, *string) != NULL) return (char *)string;
   return NULL;
 }
 
@@ -137,8 +130,7 @@ char *strrchr(const char *string, int c_) {
   const char *p = NULL;
 
   for (; *string != '\0'; string++)
-    if (*string == c)
-      p = string;
+    if (*string == c) p = string;
   return (char *)p;
 }
 
@@ -148,8 +140,7 @@ size_t strspn(const char *string, const char *skip) {
   size_t length;
 
   for (length = 0; string[length] != '\0'; length++)
-    if (strchr(skip, string[length]) == NULL)
-      break;
+    if (strchr(skip, string[length]) == NULL) break;
   return length;
 }
 
@@ -212,8 +203,7 @@ char *strtok_r(char *s, const char *delimiters, char **save_ptr) {
 
   /* If S is nonnull, start from it.
      If S is null, start from saved position. */
-  if (s == NULL)
-    s = *save_ptr;
+  if (s == NULL) s = *save_ptr;
   ASSERT(s != NULL);
 
   /* Skip any DELIMITERS at our current position. */
@@ -231,8 +221,7 @@ char *strtok_r(char *s, const char *delimiters, char **save_ptr) {
 
   /* Skip any non-DELIMITERS up to the end of the string. */
   token = s;
-  while (strchr(delimiters, *s) == NULL)
-    s++;
+  while (strchr(delimiters, *s) == NULL) s++;
   if (*s != '\0') {
     *s = '\0';
     *save_ptr = s + 1;
@@ -247,8 +236,7 @@ void *memset(void *dst_, int value, size_t size) {
 
   ASSERT(dst != NULL || size == 0);
 
-  while (size-- > 0)
-    *dst++ = value;
+  while (size-- > 0) *dst++ = value;
 
   return dst_;
 }
@@ -259,8 +247,7 @@ size_t strlen(const char *string) {
 
   ASSERT(string);
 
-  for (p = string; *p != '\0'; p++)
-    continue;
+  for (p = string; *p != '\0'; p++) continue;
   return p - string;
 }
 
@@ -292,8 +279,7 @@ size_t strlcpy(char *dst, const char *src, size_t size) {
   src_len = strlen(src);
   if (size > 0) {
     size_t dst_len = size - 1;
-    if (src_len < dst_len)
-      dst_len = src_len;
+    if (src_len < dst_len) dst_len = src_len;
     memcpy(dst, src, dst_len);
     dst[dst_len] = '\0';
   }
@@ -320,8 +306,7 @@ size_t strlcat(char *dst, const char *src, size_t size) {
   dst_len = strlen(dst);
   if (size > 0 && dst_len < size) {
     size_t copy_cnt = size - dst_len - 1;
-    if (src_len < copy_cnt)
-      copy_cnt = src_len;
+    if (src_len < copy_cnt) copy_cnt = src_len;
     memcpy(dst + dst_len, src, copy_cnt);
     dst[dst_len + copy_cnt] = '\0';
   }

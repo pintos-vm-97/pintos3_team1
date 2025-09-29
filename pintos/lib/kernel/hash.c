@@ -6,10 +6,11 @@
    See hash.h for basic information. */
 
 #include "hash.h"
+
 #include "../debug.h"
 #include "threads/malloc.h"
 
-#define list_elem_to_hash_elem(LIST_ELEM)                                      \
+#define list_elem_to_hash_elem(LIST_ELEM) \
   list_entry(LIST_ELEM, struct hash_elem, list_elem)
 
 static struct list *find_bucket(struct hash *, struct hash_elem *);
@@ -76,8 +77,7 @@ void hash_clear(struct hash *h, hash_action_func *destructor) {
    undefined behavior, whether done in DESTRUCTOR or
    elsewhere. */
 void hash_destroy(struct hash *h, hash_action_func *destructor) {
-  if (destructor != NULL)
-    hash_clear(h, destructor);
+  if (destructor != NULL) hash_clear(h, destructor);
   free(h->buckets);
 }
 
@@ -89,8 +89,7 @@ struct hash_elem *hash_insert(struct hash *h, struct hash_elem *new) {
   struct list *bucket = find_bucket(h, new);
   struct hash_elem *old = find_elem(h, bucket, new);
 
-  if (old == NULL)
-    insert_elem(h, bucket, new);
+  if (old == NULL) insert_elem(h, bucket, new);
 
   rehash(h);
 
@@ -103,8 +102,7 @@ struct hash_elem *hash_replace(struct hash *h, struct hash_elem *new) {
   struct list *bucket = find_bucket(h, new);
   struct hash_elem *old = find_elem(h, bucket, new);
 
-  if (old != NULL)
-    remove_elem(h, old);
+  if (old != NULL) remove_elem(h, old);
   insert_elem(h, bucket, new);
 
   rehash(h);
@@ -231,8 +229,7 @@ uint64_t hash_bytes(const void *buf_, size_t size) {
   ASSERT(buf != NULL);
 
   hash = FNV_64_BASIS;
-  while (size-- > 0)
-    hash = (hash * FNV_64_PRIME) ^ *buf++;
+  while (size-- > 0) hash = (hash * FNV_64_PRIME) ^ *buf++;
 
   return hash;
 }
@@ -245,8 +242,7 @@ uint64_t hash_string(const char *s_) {
   ASSERT(s != NULL);
 
   hash = FNV_64_BASIS;
-  while (*s != '\0')
-    hash = (hash * FNV_64_PRIME) ^ *s++;
+  while (*s != '\0') hash = (hash * FNV_64_PRIME) ^ *s++;
 
   return hash;
 }
@@ -268,8 +264,7 @@ static struct hash_elem *find_elem(struct hash *h, struct list *bucket,
 
   for (i = list_begin(bucket); i != list_end(bucket); i = list_next(i)) {
     struct hash_elem *hi = list_elem_to_hash_elem(i);
-    if (!h->less(hi, e, h->aux) && !h->less(e, hi, h->aux))
-      return hi;
+    if (!h->less(hi, e, h->aux) && !h->less(e, hi, h->aux)) return hi;
   }
   return NULL;
 }
@@ -307,14 +302,12 @@ static void rehash(struct hash *h) {
      We must have at least four buckets, and the number of
      buckets must be a power of 2. */
   new_bucket_cnt = h->elem_cnt / BEST_ELEMS_PER_BUCKET;
-  if (new_bucket_cnt < 4)
-    new_bucket_cnt = 4;
+  if (new_bucket_cnt < 4) new_bucket_cnt = 4;
   while (!is_power_of_2(new_bucket_cnt))
     new_bucket_cnt = turn_off_least_1bit(new_bucket_cnt);
 
   /* Don't do anything if the bucket count wouldn't change. */
-  if (new_bucket_cnt == old_bucket_cnt)
-    return;
+  if (new_bucket_cnt == old_bucket_cnt) return;
 
   /* Allocate new buckets and initialize them as empty. */
   new_buckets = malloc(sizeof *new_buckets * new_bucket_cnt);
@@ -324,8 +317,7 @@ static void rehash(struct hash *h) {
        there's no reason for it to be an error. */
     return;
   }
-  for (i = 0; i < new_bucket_cnt; i++)
-    list_init(&new_buckets[i]);
+  for (i = 0; i < new_bucket_cnt; i++) list_init(&new_buckets[i]);
 
   /* Install new bucket info. */
   h->buckets = new_buckets;

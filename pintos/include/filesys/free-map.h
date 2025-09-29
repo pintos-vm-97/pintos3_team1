@@ -1,9 +1,10 @@
 #ifndef FILESYS_FREE_MAP_H
 #define FILESYS_FREE_MAP_H
 
-#include "devices/disk.h"
 #include <stdbool.h>
 #include <stddef.h>
+
+#include "devices/disk.h"
 
 void free_map_init(void);
 void free_map_read(void);

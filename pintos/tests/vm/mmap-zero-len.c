@@ -4,11 +4,12 @@
  * Since kernel 2.6.12, mapping zero length fails. We expect
  * mmap in Pintos to fail (i.e. return MAP_FAILED) when length is 0. */
 
+#include <string.h>
+#include <syscall.h>
+
 #include "tests/lib.h"
 #include "tests/main.h"
 #include "tests/vm/sample.inc"
-#include <string.h>
-#include <syscall.h>
 
 #define ACTUAL ((void *)0x10000000)
 

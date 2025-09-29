@@ -1,4 +1,10 @@
 #include "filesys/fsutil.h"
+
+#include <debug.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "devices/disk.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
@@ -6,10 +12,6 @@
 #include "threads/malloc.h"
 #include "threads/palloc.h"
 #include "threads/vaddr.h"
-#include <debug.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 /* List files in the root directory. */
 void fsutil_ls(char **argv UNUSED) {
@@ -18,10 +20,8 @@ void fsutil_ls(char **argv UNUSED) {
 
   printf("Files in the root directory:\n");
   dir = dir_open_root();
-  if (dir == NULL)
-    PANIC("root dir open failed");
-  while (dir_readdir(dir, name))
-    printf("%s\n", name);
+  if (dir == NULL) PANIC("root dir open failed");
+  while (dir_readdir(dir, name)) printf("%s\n", name);
   printf("End of listing.\n");
 }
 
@@ -35,14 +35,12 @@ void fsutil_cat(char **argv) {
 
   printf("Printing '%s' to the console...\n", file_name);
   file = filesys_open(file_name);
-  if (file == NULL)
-    PANIC("%s: open failed", file_name);
+  if (file == NULL) PANIC("%s: open failed", file_name);
   buffer = palloc_get_page(PAL_ASSERT);
   for (;;) {
     off_t pos = file_tell(file);
     off_t n = file_read(file, buffer, PGSIZE);
-    if (n == 0)
-      break;
+    if (n == 0) break;
 
     hex_dump(pos, buffer, n, true);
   }
@@ -55,8 +53,7 @@ void fsutil_rm(char **argv) {
   const char *file_name = argv[1];
 
   printf("Deleting '%s'...\n", file_name);
-  if (!filesys_remove(file_name))
-    PANIC("%s: delete failed\n", file_name);
+  if (!filesys_remove(file_name)) PANIC("%s: delete failed\n", file_name);
 }
 
 /* Copies from the "scratch" disk, hdc or hd1:0 to file ARGV[1]
@@ -84,28 +81,23 @@ void fsutil_put(char **argv) {
 
   /* Allocate buffer. */
   buffer = malloc(DISK_SECTOR_SIZE);
-  if (buffer == NULL)
-    PANIC("couldn't allocate buffer");
+  if (buffer == NULL) PANIC("couldn't allocate buffer");
 
   /* Open source disk and read file size. */
   src = disk_get(1, 0);
-  if (src == NULL)
-    PANIC("couldn't open source disk (hdc or hd1:0)");
+  if (src == NULL) PANIC("couldn't open source disk (hdc or hd1:0)");
 
   /* Read file size. */
   disk_read(src, sector++, buffer);
   if (memcmp(buffer, "PUT", 4))
     PANIC("%s: missing PUT signature on scratch disk", file_name);
   size = ((int32_t *)buffer)[1];
-  if (size < 0)
-    PANIC("%s: invalid file size %d", file_name, size);
+  if (size < 0) PANIC("%s: invalid file size %d", file_name, size);
 
   /* Create destination file. */
-  if (!filesys_create(file_name, size))
-    PANIC("%s: create failed", file_name);
+  if (!filesys_create(file_name, size)) PANIC("%s: create failed", file_name);
   dst = filesys_open(file_name);
-  if (dst == NULL)
-    PANIC("%s: open failed", file_name);
+  if (dst == NULL) PANIC("%s: open failed", file_name);
 
   /* Do copy. */
   while (size > 0) {
@@ -146,19 +138,16 @@ void fsutil_get(char **argv) {
 
   /* Allocate buffer. */
   buffer = malloc(DISK_SECTOR_SIZE);
-  if (buffer == NULL)
-    PANIC("couldn't allocate buffer");
+  if (buffer == NULL) PANIC("couldn't allocate buffer");
 
   /* Open source file. */
   src = filesys_open(file_name);
-  if (src == NULL)
-    PANIC("%s: open failed", file_name);
+  if (src == NULL) PANIC("%s: open failed", file_name);
   size = file_length(src);
 
   /* Open target disk. */
   dst = disk_get(1, 0);
-  if (dst == NULL)
-    PANIC("couldn't open target disk (hdc or hd1:0)");
+  if (dst == NULL) PANIC("couldn't open target disk (hdc or hd1:0)");
 
   /* Write size to sector 0. */
   memset(buffer, 0, DISK_SECTOR_SIZE);

@@ -1,12 +1,14 @@
 #include "filesys/filesys.h"
+
+#include <debug.h>
+#include <stdio.h>
+#include <string.h>
+
 #include "devices/disk.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
-#include <debug.h>
-#include <stdio.h>
-#include <string.h>
 
 /* The disk that contains the file system. */
 struct disk *filesys_disk;
@@ -25,16 +27,14 @@ void filesys_init(bool format) {
 #ifdef EFILESYS
   fat_init();
 
-  if (format)
-    do_format();
+  if (format) do_format();
 
   fat_open();
 #else
   /* Original FS */
   free_map_init();
 
-  if (format)
-    do_format();
+  if (format) do_format();
 
   free_map_open();
 #endif
@@ -61,8 +61,7 @@ bool filesys_create(const char *name, off_t initial_size) {
   bool success = (dir != NULL && free_map_allocate(1, &inode_sector) &&
                   inode_create(inode_sector, initial_size) &&
                   dir_add(dir, name, inode_sector));
-  if (!success && inode_sector != 0)
-    free_map_release(inode_sector, 1);
+  if (!success && inode_sector != 0) free_map_release(inode_sector, 1);
   dir_close(dir);
 
   return success;
@@ -77,8 +76,7 @@ struct file *filesys_open(const char *name) {
   struct dir *dir = dir_open_root();
   struct inode *inode = NULL;
 
-  if (dir != NULL)
-    dir_lookup(dir, name, &inode);
+  if (dir != NULL) dir_lookup(dir, name, &inode);
   dir_close(dir);
 
   return file_open(inode);
@@ -106,8 +104,7 @@ static void do_format(void) {
   fat_close();
 #else
   free_map_create();
-  if (!dir_create(ROOT_DIR_SECTOR, 16))
-    PANIC("root directory creation failed");
+  if (!dir_create(ROOT_DIR_SECTOR, 16)) PANIC("root directory creation failed");
   free_map_close();
 #endif
 

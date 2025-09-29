@@ -1,12 +1,14 @@
 #include "threads/mmu.h"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <string.h>
+
 #include "intrinsic.h"
 #include "threads/init.h"
 #include "threads/palloc.h"
 #include "threads/pte.h"
 #include "threads/thread.h"
-#include <stdbool.h>
-#include <stddef.h>
-#include <string.h>
 
 static uint64_t *pgdir_walk(uint64_t *pdp, const uint64_t va, int create) {
   int idx = PDX(va);
@@ -91,8 +93,7 @@ uint64_t *pml4e_walk(uint64_t *pml4e, const uint64_t va, int create) {
  * allocation fails. */
 uint64_t *pml4_create(void) {
   uint64_t *pml4 = palloc_get_page(0);
-  if (pml4)
-    memcpy(pml4, base_pml4, PGSIZE);
+  if (pml4) memcpy(pml4, base_pml4, PGSIZE);
   return pml4;
 }
 
@@ -106,8 +107,7 @@ static bool pt_for_each(uint64_t *pt, pte_for_each_func *func, void *aux,
                           ((uint64_t)pdp_index << PDPESHIFT) |
                           ((uint64_t)pdx_index << PDXSHIFT) |
                           ((uint64_t)i << PTXSHIFT));
-      if (!func(pte, va, aux))
-        return false;
+      if (!func(pte, va, aux)) return false;
     }
   }
   return true;
@@ -142,8 +142,7 @@ bool pml4_for_each(uint64_t *pml4, pte_for_each_func *func, void *aux) {
   for (unsigned i = 0; i < PGSIZE / sizeof(uint64_t *); i++) {
     uint64_t *pdpe = ptov((uint64_t *)pml4[i]);
     if (((uint64_t)pdpe) & PTE_P)
-      if (!pdp_for_each((uint64_t *)PTE_ADDR(pdpe), func, aux, i))
-        return false;
+      if (!pdp_for_each((uint64_t *)PTE_ADDR(pdpe), func, aux, i)) return false;
   }
   return true;
 }
@@ -151,8 +150,7 @@ bool pml4_for_each(uint64_t *pml4, pte_for_each_func *func, void *aux) {
 static void pt_destroy(uint64_t *pt) {
   for (unsigned i = 0; i < PGSIZE / sizeof(uint64_t *); i++) {
     uint64_t *pte = ptov((uint64_t *)pt[i]);
-    if (((uint64_t)pte) & PTE_P)
-      palloc_free_page((void *)PTE_ADDR(pte));
+    if (((uint64_t)pte) & PTE_P) palloc_free_page((void *)PTE_ADDR(pte));
   }
   palloc_free_page((void *)pt);
 }
@@ -160,8 +158,7 @@ static void pt_destroy(uint64_t *pt) {
 static void pgdir_destroy(uint64_t *pdp) {
   for (unsigned i = 0; i < PGSIZE / sizeof(uint64_t *); i++) {
     uint64_t *pte = ptov((uint64_t *)pdp[i]);
-    if (((uint64_t)pte) & PTE_P)
-      pt_destroy(PTE_ADDR(pte));
+    if (((uint64_t)pte) & PTE_P) pt_destroy(PTE_ADDR(pte));
   }
   palloc_free_page((void *)pdp);
 }
@@ -169,22 +166,19 @@ static void pgdir_destroy(uint64_t *pdp) {
 static void pdpe_destroy(uint64_t *pdpe) {
   for (unsigned i = 0; i < PGSIZE / sizeof(uint64_t *); i++) {
     uint64_t *pde = ptov((uint64_t *)pdpe[i]);
-    if (((uint64_t)pde) & PTE_P)
-      pgdir_destroy((void *)PTE_ADDR(pde));
+    if (((uint64_t)pde) & PTE_P) pgdir_destroy((void *)PTE_ADDR(pde));
   }
   palloc_free_page((void *)pdpe);
 }
 
 /* Destroys pml4e, freeing all the pages it references. */
 void pml4_destroy(uint64_t *pml4) {
-  if (pml4 == NULL)
-    return;
+  if (pml4 == NULL) return;
   ASSERT(pml4 != base_pml4);
 
   /* if PML4 (vaddr) >= 1, it's kernel space by define. */
   uint64_t *pdpe = ptov((uint64_t *)pml4[0]);
-  if (((uint64_t)pdpe) & PTE_P)
-    pdpe_destroy((void *)PTE_ADDR(pdpe));
+  if (((uint64_t)pdpe) & PTE_P) pdpe_destroy((void *)PTE_ADDR(pdpe));
   palloc_free_page((void *)pml4);
 }
 
@@ -201,8 +195,7 @@ void *pml4_get_page(uint64_t *pml4, const void *uaddr) {
 
   uint64_t *pte = pml4e_walk(pml4, (uint64_t)uaddr, 0);
 
-  if (pte && (*pte & PTE_P))
-    return ptov(PTE_ADDR(*pte)) + pg_ofs(uaddr);
+  if (pte && (*pte & PTE_P)) return ptov(PTE_ADDR(*pte)) + pg_ofs(uaddr);
   return NULL;
 }
 
@@ -222,8 +215,7 @@ bool pml4_set_page(uint64_t *pml4, void *upage, void *kpage, bool rw) {
 
   uint64_t *pte = pml4e_walk(pml4, (uint64_t)upage, 1);
 
-  if (pte)
-    *pte = vtop(kpage) | PTE_P | (rw ? PTE_W : 0) | PTE_U;
+  if (pte) *pte = vtop(kpage) | PTE_P | (rw ? PTE_W : 0) | PTE_U;
   return pte != NULL;
 }
 
@@ -240,8 +232,7 @@ void pml4_clear_page(uint64_t *pml4, void *upage) {
 
   if (pte != NULL && (*pte & PTE_P) != 0) {
     *pte &= ~PTE_P;
-    if (rcr3() == vtop(pml4))
-      invlpg((uint64_t)upage);
+    if (rcr3() == vtop(pml4)) invlpg((uint64_t)upage);
   }
 }
 
@@ -264,8 +255,7 @@ void pml4_set_dirty(uint64_t *pml4, const void *vpage, bool dirty) {
     else
       *pte &= ~(uint32_t)PTE_D;
 
-    if (rcr3() == vtop(pml4))
-      invlpg((uint64_t)vpage);
+    if (rcr3() == vtop(pml4)) invlpg((uint64_t)vpage);
   }
 }
 
@@ -288,7 +278,6 @@ void pml4_set_accessed(uint64_t *pml4, const void *vpage, bool accessed) {
     else
       *pte &= ~(uint32_t)PTE_A;
 
-    if (rcr3() == vtop(pml4))
-      invlpg((uint64_t)vpage);
+    if (rcr3() == vtop(pml4)) invlpg((uint64_t)vpage);
   }
 }

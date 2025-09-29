@@ -97,13 +97,14 @@
    After 178 seconds, load average=5.16.
 */
 
+#include <stdio.h>
+
 #include "devices/timer.h"
 #include "tests/threads/tests.h"
 #include "threads/init.h"
 #include "threads/malloc.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
-#include <stdio.h>
 
 static int64_t start_time;
 
@@ -143,7 +144,6 @@ static void load_thread(void *aux UNUSED) {
 
   thread_set_nice(20);
   timer_sleep(sleep_time - timer_elapsed(start_time));
-  while (timer_elapsed(start_time) < spin_time)
-    continue;
+  while (timer_elapsed(start_time) < spin_time) continue;
   timer_sleep(exit_time - timer_elapsed(start_time));
 }

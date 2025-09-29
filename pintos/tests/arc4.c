@@ -1,4 +1,5 @@
 #include "tests/arc4.h"
+
 #include <stdint.h>
 
 /* Swap bytes. */
@@ -16,13 +17,11 @@ void arc4_init(struct arc4 *arc4, const void *key_, size_t size) {
 
   s = arc4->s;
   arc4->i = arc4->j = 0;
-  for (i = 0; i < 256; i++)
-    s[i] = i;
+  for (i = 0; i < 256; i++) s[i] = i;
   for (key_idx = 0, i = j = 0; i < 256; i++) {
     j = (j + s[i] + key[key_idx]) & 255;
     swap_byte(s + i, s + j);
-    if (++key_idx >= size)
-      key_idx = 0;
+    if (++key_idx >= size) key_idx = 0;
   }
 }
 

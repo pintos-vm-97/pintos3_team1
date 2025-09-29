@@ -2,10 +2,11 @@
    then reads the data in the file back using the read system
    call to verify. */
 
-#include "tests/lib.h"
-#include "tests/main.h"
 #include <string.h>
 #include <syscall.h>
+
+#include "tests/lib.h"
+#include "tests/main.h"
 
 #define ACTUAL ((void *)0x10000000)
 

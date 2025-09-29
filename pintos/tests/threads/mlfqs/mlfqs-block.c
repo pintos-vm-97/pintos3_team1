@@ -9,13 +9,14 @@
    block thread should be immediately scheduled when the main
    thread releases the lock. */
 
+#include <stdio.h>
+
 #include "devices/timer.h"
 #include "tests/threads/tests.h"
 #include "threads/init.h"
 #include "threads/malloc.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
-#include <stdio.h>
 
 static void block_thread(void *lock_);
 
@@ -35,8 +36,7 @@ void test_mlfqs_block(void) {
 
   msg("Main thread spinning for 5 seconds...");
   start_time = timer_ticks();
-  while (timer_elapsed(start_time) < 5 * TIMER_FREQ)
-    continue;
+  while (timer_elapsed(start_time) < 5 * TIMER_FREQ) continue;
 
   msg("Main thread releasing lock.");
   lock_release(&lock);
@@ -50,8 +50,7 @@ static void block_thread(void *lock_) {
 
   msg("Block thread spinning for 20 seconds...");
   start_time = timer_ticks();
-  while (timer_elapsed(start_time) < 20 * TIMER_FREQ)
-    continue;
+  while (timer_elapsed(start_time) < 20 * TIMER_FREQ) continue;
 
   msg("Block thread acquiring lock...");
   lock_acquire(lock);

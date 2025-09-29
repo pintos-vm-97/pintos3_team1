@@ -2,10 +2,11 @@
    Tries to write to a mapping present in the parent.
    The process must be terminated with -1 exit code. */
 
+#include <string.h>
+
 #include "tests/lib.h"
 #include "tests/main.h"
 #include "tests/vm/sample.inc"
-#include <string.h>
 
 void test_main(void) {
   memset((char *)0x54321000, 0, 4096);

@@ -1,11 +1,12 @@
 /* Checks if anonymous pages are lazy loaded  */
 
-#include "tests/lib.h"
-#include "tests/main.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <syscall.h>
+
+#include "tests/lib.h"
+#include "tests/main.h"
 
 #define PAGE_SIZE 4096
 #define CHUNK_PAGE_COUNT 3
