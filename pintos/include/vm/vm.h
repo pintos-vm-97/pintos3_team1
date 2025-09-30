@@ -63,9 +63,11 @@ struct page {
 };
 
 /* The representation of "frame" */
+// 메타데이터 구조체 (관리용)
 struct frame {
   void *kva;
   struct page *page;
+  struct list_elem elem;
 };
 
 /* The function table for page operations.
