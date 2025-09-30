@@ -79,16 +79,18 @@ struct page *spt_find_page(struct supplemental_page_table *spt, void *va) {
 bool spt_insert_page(struct supplemental_page_table *spt, struct page *page) {
   /* TODO: Fill this function. */
   int succ = false;
-  hash_insert(&spt->hash, &page->hash_elem);
-  succ = true;
-
+  struct hash_elem *old = hash_insert(&spt->hash, &page->hash_elem);
+  // 이미 존재하는 것이 없음.
+  if (old == NULL) succ = true;
   return succ;
 }
 
 void spt_remove_page(struct supplemental_page_table *spt, struct page *page) {
   struct hash_elem *he = hash_delete(&spt->hash, &page->hash_elem);
-  vm_dealloc_page(page);
-  return he == NULL ? false : true;
+  if (he != NULL) {
+    // double free 위험
+    vm_dealloc_page(page);
+  }
 }
 
 /* Get the struct frame, that will be evicted. */
