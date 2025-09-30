@@ -35,21 +35,22 @@ enum vm_type {
 struct page_operations;
 struct thread;
 
-#define VM_TYPE(type) ((type)&7)
+#define VM_TYPE(type) ((type) & 7)
 
-/* The representation of "page".
- * This is kind of "parent class", which has four "child class"es, which are
- * uninit_page, file_page, anon_page, and page cache (project4).
- * DO NOT REMOVE/MODIFY PREDEFINED MEMBER OF THIS STRUCTURE. */
+/* "page"의 표현 구조체.
+ * 이것은 일종의 "부모 클래스" 역할을 하며,
+ * 네 가지 "자식 클래스"(uninit_page, file_page, anon_page,
+ * page_cache(project4))를 가진다. 이 구조체에 정의된 기본 멤버는 절대
+ * 삭제하거나 수정하지 말 것. */
 struct page {
   const struct page_operations *operations;
-  void *va;            /* Address in terms of user space */
-  struct frame *frame; /* Back reference for frame */
+  void *va;            /* 사용자 공간 기준의 가상 주소 */
+  struct frame *frame; /* 해당 물리 프레임을 가리키는 역참조 */
 
-  /* Your implementation */
+  /* 구현해야 할 부분 */
 
-  /* Per-type data are binded into the union.
-   * Each function automatically detects the current union */
+  /* 타입별 데이터는 union에 묶여 있다.
+   * 각 함수는 현재 union 타입을 자동으로 감지한다. */
   union {
     struct uninit_page uninit;
     struct anon_page anon;
@@ -66,15 +67,15 @@ struct frame {
   struct page *page;
 };
 
-/* The function table for page operations.
- * This is one way of implementing "interface" in C.
- * Put the table of "method" into the struct's member, and
- * call it whenever you needed. */
+/* 페이지 동작을 정의한 함수 테이블.
+ * C에서 "인터페이스"를 구현하는 한 가지 방식이다.
+ * 구조체의 멤버로 "메서드" 테이블을 넣어두고,
+ * 필요할 때마다 그 함수를 호출하는 식으로 사용한다. */
 struct page_operations {
-  bool (*swap_in)(struct page *, void *);
-  bool (*swap_out)(struct page *);
-  void (*destroy)(struct page *);
-  enum vm_type type;
+  bool (*swap_in)(struct page *, void *); /* 스왑 영역 → 메모리 적재 */
+  bool (*swap_out)(struct page *);        /* 메모리 → 스왑 영역 저장 */
+  void (*destroy)(struct page *);         /* 페이지 소멸 처리 */
+  enum vm_type type; /* 페이지 타입 (anon/file/uninit 등) */
 };
 
 #define swap_in(page, v) (page)->operations->swap_in((page), v)
