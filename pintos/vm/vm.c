@@ -5,6 +5,9 @@
 #include "threads/malloc.h"
 #include "vm/inspect.h"
 
+struct list frame_list;
+struct lock frame_lock;
+
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
 void vm_init(void) {
@@ -15,7 +18,8 @@ void vm_init(void) {
 #endif
   register_inspect_intr();
   /* DO NOT MODIFY UPPER LINES. */
-  /* TODO: Your code goes here. */
+  list_init(&frame_list);
+  lock_init(&frame_lock);
 }
 
 /* Get the type of the page. This function is useful if you want to know the
@@ -48,6 +52,30 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage,
 
   /* Check wheter the upage is already occupied or not. */
   if (spt_find_page(spt, upage) == NULL) {
+    struct page *page = malloc(sizeof(struct page));
+    if (page == NULL) {
+      goto err;
+    }
+
+    page->va = upage;
+    page->writable = writable;
+
+    bool (*initializer)(struct page *, enum vm_type, void *kva) = NULL;
+    switch (VM_TYPE(type)) {
+      case VM_ANON:
+        initializer = anon_initializer;
+        break;
+      case VM_FILE:
+        initializer = file_backed_initializer;
+        break;
+
+      default:
+        free(page);
+        goto err;
+    }
+
+    uninit_new(page, upage, init, type, aux, initializer);
+
     /* TODO: Create the page, fetch the initialier according to the VM type,
      * TODO: and then create "uninit" page struct by calling uninit_new. You
      * TODO: should modify the field after calling the uninit_new. */
