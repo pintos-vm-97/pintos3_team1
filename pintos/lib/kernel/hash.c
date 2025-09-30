@@ -371,3 +371,19 @@ bool hash_elem_less(const struct hash_elem *a, const struct hash_elem *b,
   /* A가 B보다 작으면 true를 반환하고,
    * A가 B보다 크거나 같으면 false를 반환한다. */
 }
+
+/* 해시 요소 E에 대해 어떤 연산을 수행한다.
+ * 이때 보조 데이터 AUX를 함께 사용한다. */
+typedef void hash_action_func(struct hash_elem *e, void *aux);
+
+void destruct_hash_elem(struct hash_elem *e, void *aux) {
+  ASSERT(e != NULL);
+
+  struct page *page = hash_entry(e, struct page, hash_elem);
+  // 여기서 프레임도 삭제해야함
+  // if (page->operations->destroy != NULL) {
+  //   (page)->operations->destroy(page);
+  // }
+
+  free(page);
+}
