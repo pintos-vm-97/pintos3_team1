@@ -37,25 +37,44 @@ static struct frame *vm_get_victim(void);
 static bool vm_do_claim_page(struct page *page);
 static struct frame *vm_evict_frame(void);
 
-/* Create the pending page object with initializer. If you want to create a
- * page, do not create it directly and make it through this function or
- * `vm_alloc_page`. */
+/* 초기화 함수를 가진 "대기(pending)" 페이지 객체를 생성한다.
+ * 새로운 페이지를 만들고 싶다면, 직접 생성하지 말고
+ * 반드시 이 함수나 `vm_alloc_page`를 통해 생성해야 한다.
+ * aux free 책임을 어디서 질건지 체크 */
 bool vm_alloc_page_with_initializer(enum vm_type type, void *upage,
                                     bool writable, vm_initializer *init,
                                     void *aux) {
+  // 외부에서 uninit type 날리면 안됨.
   ASSERT(VM_TYPE(type) != VM_UNINIT)
 
   struct supplemental_page_table *spt = &thread_current()->spt;
+  void *user_page = pg_round_down(upage);
 
-  /* Check wheter the upage is already occupied or not. */
-  if (spt_find_page(spt, upage) == NULL) {
-    /* TODO: Create the page, fetch the initialier according to the VM type,
-     * TODO: and then create "uninit" page struct by calling uninit_new. You
-     * TODO: should modify the field after calling the uninit_new. */
-
-    /* TODO: Insert the page into the spt. */
+  struct page *newpage = malloc(sizeof(struct page));
+  /* upage가 이미 다른 페이지로 점유되어 있는지 확인한다. */
+  if (spt_find_page(spt, user_page) == NULL) {
+    // type별 분기처리
+    switch (VM_TYPE(type)) {
+      case VM_ANON:
+        uninit_new(newpage, user_page, init, type, aux, anon_initializer);
+        break;
+      case VM_FILE:
+        uninit_new(newpage, user_page, init, type, aux,
+                   file_backed_initializer);
+        break;
+      default:
+        goto err;
+    }
+    /* 권한 */
+    newpage->writable = writable;
+    /* 페이지를 SPT에 삽입한다. */
+    if (!spt_insert_page(spt, newpage)) goto err;
+    return true;
+  } else {
+    goto err;
   }
 err:
+  free(newpage);
   return false;
 }
 
@@ -170,7 +189,7 @@ static bool vm_do_claim_page(struct page *page) {
 }
 
 /* Initialize new supplemental page table */
-void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
+void supplemental_page_table_init(struct supplemental_page_table *spt) {
   ASSERT(spt != NULL);
   hash_init(&spt->hash, page_hash, hash_elem_less, NULL);
 }
@@ -180,7 +199,7 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
                                   struct supplemental_page_table *src UNUSED) {}
 
 /* Free the resource hold by the supplemental page table */
-void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED) {
+void supplemental_page_table_kill(struct supplemental_page_table *spt) {
   ASSERT(spt != NULL);
   hash_clear(&spt->hash, destruct_hash_elem);
   /* TODO: Destroy all the supplemental_page_table hold by thread and

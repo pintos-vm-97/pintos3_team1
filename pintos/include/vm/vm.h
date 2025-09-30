@@ -50,7 +50,7 @@ struct page {
 
   /* 구현해야 할 부분 */
   struct hash_elem hash_elem;  // hash 소속elem
-
+  bool writable;
   /* 타입별 데이터는 union에 묶여 있다.
    * 각 함수는 현재 union 타입을 자동으로 감지한다. */
   union {
@@ -93,25 +93,38 @@ struct supplemental_page_table {
 };
 
 #include "threads/thread.h"
+// ✅
 void supplemental_page_table_init(struct supplemental_page_table *spt);
+// ❌
 bool supplemental_page_table_copy(struct supplemental_page_table *dst,
                                   struct supplemental_page_table *src);
+// ✅
 void supplemental_page_table_kill(struct supplemental_page_table *spt);
+// ✅
 struct page *spt_find_page(struct supplemental_page_table *spt, void *va);
+// ✅
 bool spt_insert_page(struct supplemental_page_table *spt, struct page *page);
+// ✅
 void spt_remove_page(struct supplemental_page_table *spt, struct page *page);
 
+// ❌
 void vm_init(void);
+// ❌
 bool vm_try_handle_fault(struct intr_frame *f, void *addr, bool user,
                          bool write, bool not_present);
 
 #define vm_alloc_page(type, upage, writable) \
   vm_alloc_page_with_initializer((type), (upage), (writable), NULL, NULL)
+
+// ❌
 bool vm_alloc_page_with_initializer(enum vm_type type, void *upage,
                                     bool writable, vm_initializer *init,
                                     void *aux);
+// ❌
 void vm_dealloc_page(struct page *page);
+// ❌
 bool vm_claim_page(void *va);
+// ❌
 enum vm_type page_get_type(struct page *page);
 
 #endif /* VM_VM_H */
