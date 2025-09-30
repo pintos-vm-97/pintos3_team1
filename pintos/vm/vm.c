@@ -2,6 +2,7 @@
 
 #include "vm/vm.h"
 
+#include "include/threads/vaddr.h"
 #include "threads/malloc.h"
 #include "vm/inspect.h"
 
@@ -59,14 +60,19 @@ err:
 }
 
 /* Find VA from spt and return page. On error, return NULL. */
-struct page *spt_find_page(struct supplemental_page_table *spt UNUSED,
-                           void *va UNUSED) {
-  struct page *page = NULL;
-  // hash
-  // hash_find(&spt->hash,)
+struct page *spt_find_page(struct supplemental_page_table *spt, void *va) {
+  // va만 삽입한 가짜 hash_elem을 보내는 방식
   /* TODO: Fill this function. */
 
-  return page;
+  struct page tmp_page;
+  // 4kb 맞춤
+  tmp_page.va = pg_round_down(va);
+  struct hash_elem *he = &tmp_page.hash_elem;
+  struct hash_elem *find_elem = hash_find(&spt->hash, he);
+
+  if (find_elem == NULL) return NULL;
+
+  return hash_entry(find_elem, struct page, hash_elem);
 }
 
 /* Insert PAGE into spt with validation. */
@@ -165,7 +171,7 @@ static bool vm_do_claim_page(struct page *page) {
 /* Initialize new supplemental page table */
 void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
   ASSERT(spt != NULL);
-  hash_init(&spt->hash, hash_bytes, hash_elem_less, NULL);
+  hash_init(&spt->hash, page_hash, hash_elem_less, NULL);
 }
 
 /* Copy supplemental page table from src to dst */
