@@ -82,13 +82,15 @@ struct page_operations {
 
 #define swap_in(page, v) (page)->operations->swap_in((page), v)
 #define swap_out(page) (page)->operations->swap_out(page)
-#define destroy(page) \
+#define page_destroy(page) \
   if ((page)->operations->destroy) (page)->operations->destroy(page)
 
 /* Representation of current process's memory space.
  * We don't want to force you to obey any specific design for this struct.
  * All designs up to you for this. */
-struct supplemental_page_table {};
+struct supplemental_page_table {
+  struct hash hash;
+};
 
 #include "threads/thread.h"
 void supplemental_page_table_init(struct supplemental_page_table *spt);

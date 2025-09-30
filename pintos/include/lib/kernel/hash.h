@@ -47,7 +47,6 @@ typedef uint64_t hash_hash_func(const struct hash_elem *e, void *aux);
  * A가 B보다 크거나 같으면 false를 반환한다. */
 typedef bool hash_less_func(const struct hash_elem *a,
                             const struct hash_elem *b, void *aux);
-
 /* 해시 요소 E에 대해 어떤 연산을 수행한다.
  * 이때 보조 데이터 AUX를 함께 사용한다. */
 typedef void hash_action_func(struct hash_elem *e, void *aux);
@@ -96,4 +95,7 @@ uint64_t hash_bytes(const void *, size_t);
 uint64_t hash_string(const char *);
 uint64_t hash_int(int);
 
+bool hash_elem_less(const struct hash_elem *a, const struct hash_elem *b,
+                    void *aux);
+void destruct_hash_elem(struct hash_elem *e, void *aux);
 #endif /* lib/kernel/hash.h */

@@ -381,9 +381,9 @@ void destruct_hash_elem(struct hash_elem *e, void *aux) {
 
   struct page *page = hash_entry(e, struct page, hash_elem);
   // 여기서 프레임도 삭제해야함
-  // if (page->operations->destroy != NULL) {
-  //   (page)->operations->destroy(page);
-  // }
+  if (page->operations->destroy != NULL) {
+    page->operations->destroy(page);
+  }
 
   free(page);
 }

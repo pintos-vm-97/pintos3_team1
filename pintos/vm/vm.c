@@ -62,6 +62,8 @@ err:
 struct page *spt_find_page(struct supplemental_page_table *spt UNUSED,
                            void *va UNUSED) {
   struct page *page = NULL;
+  // hash
+  // hash_find(&spt->hash,)
   /* TODO: Fill this function. */
 
   return page;
@@ -69,9 +71,12 @@ struct page *spt_find_page(struct supplemental_page_table *spt UNUSED,
 
 /* Insert PAGE into spt with validation. */
 bool spt_insert_page(struct supplemental_page_table *spt UNUSED,
-                     struct page *page UNUSED) {
+                     struct page *page) {
   int succ = false;
   /* TODO: Fill this function. */
+
+  hash_insert(&spt->hash, &page->hash_elem);
+  succ = true;
 
   return succ;
 }
@@ -158,7 +163,10 @@ static bool vm_do_claim_page(struct page *page) {
 }
 
 /* Initialize new supplemental page table */
-void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {}
+void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
+  ASSERT(spt != NULL);
+  hash_init(&spt->hash, hash_bytes, hash_elem_less, NULL);
+}
 
 /* Copy supplemental page table from src to dst */
 bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
@@ -166,6 +174,8 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
 
 /* Free the resource hold by the supplemental page table */
 void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED) {
+  ASSERT(spt != NULL);
+  hash_clear(&spt->hash, destruct_hash_elem);
   /* TODO: Destroy all the supplemental_page_table hold by thread and
    * TODO: writeback all the modified contents to the storage. */
 }
