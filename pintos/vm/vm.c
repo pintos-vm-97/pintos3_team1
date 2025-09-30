@@ -3,6 +3,7 @@
 #include "vm/vm.h"
 
 #include "threads/malloc.h"
+#include "threads/mmu.h"
 #include "vm/inspect.h"
 
 struct list frame_list;
@@ -75,12 +76,10 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage,
     }
 
     uninit_new(page, upage, init, type, aux, initializer);
-
-    /* TODO: Create the page, fetch the initialier according to the VM type,
-     * TODO: and then create "uninit" page struct by calling uninit_new. You
-     * TODO: should modify the field after calling the uninit_new. */
-
-    /* TODO: Insert the page into the spt. */
+    if (!spt_insert_page(spt, page)) {
+      free(page);
+      goto err;
+    }
   }
 err:
   return false;
