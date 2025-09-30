@@ -50,7 +50,7 @@ static bool uninit_initialize(struct page *page, void *kva) {
   /* Fetch first, page_initialize may overwrite the values */
   vm_initializer *init = uninit->init;  // 내용채우기 함수 포인터 백업
   void *aux = uninit->aux;              // 부가정보 백업
-  // 이것을 복사하는이유는 위험. 위험한 이유는 모름
+  // 이것을 복사하는이유는 안하면 위험. 위험한 이유는 모름
   /* TODO: You may need to fix this function. */
   return uninit->page_initializer(page, uninit->type, kva) &&
          (init ? init(page, aux) : true);
