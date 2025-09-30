@@ -76,11 +76,9 @@ struct page *spt_find_page(struct supplemental_page_table *spt, void *va) {
 }
 
 /* Insert PAGE into spt with validation. */
-bool spt_insert_page(struct supplemental_page_table *spt UNUSED,
-                     struct page *page) {
-  int succ = false;
+bool spt_insert_page(struct supplemental_page_table *spt, struct page *page) {
   /* TODO: Fill this function. */
-
+  int succ = false;
   hash_insert(&spt->hash, &page->hash_elem);
   succ = true;
 
@@ -88,8 +86,9 @@ bool spt_insert_page(struct supplemental_page_table *spt UNUSED,
 }
 
 void spt_remove_page(struct supplemental_page_table *spt, struct page *page) {
+  struct hash_elem *he = hash_delete(&spt->hash, &page->hash_elem);
   vm_dealloc_page(page);
-  return true;
+  return he == NULL ? false : true;
 }
 
 /* Get the struct frame, that will be evicted. */
@@ -143,7 +142,7 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 /* Free the page.
  * DO NOT MODIFY THIS FUNCTION. */
 void vm_dealloc_page(struct page *page) {
-  destroy(page);
+  page_destroy(page);
   free(page);
 }
 
