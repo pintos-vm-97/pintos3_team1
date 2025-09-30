@@ -163,8 +163,14 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
                          bool not_present UNUSED) {
   struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
   struct page *page = NULL;
-  /* TODO: Validate the fault */
-  /* TODO: Your code goes here */
+  if (addr == NULL || is_kernel_vaddr(addr) || not_present) {
+    return false;
+  }
+
+  page = spt_find_page(spt, addr);
+  if (page == NULL) {
+    return false;
+  }
 
   return vm_do_claim_page(page);
 }
