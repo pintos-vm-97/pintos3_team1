@@ -358,3 +358,16 @@ static void remove_elem(struct hash *h, struct hash_elem *e) {
   h->elem_cnt--;
   list_remove(&e->list_elem);
 }
+
+/* hash_elem을 va로 비교하는함수 */
+bool hash_elem_less(const struct hash_elem *a, const struct hash_elem *b,
+                    void *aux) {
+  ASSERT(a != NULL);
+  ASSERT(b != NULL);
+
+  struct page *page1 = hash_entry(a, struct page, hash_elem);
+  struct page *page2 = hash_entry(b, struct page, hash_elem);
+  return page1->va < page2->va ? true : false;
+  /* A가 B보다 작으면 true를 반환하고,
+   * A가 B보다 크거나 같으면 false를 반환한다. */
+}
