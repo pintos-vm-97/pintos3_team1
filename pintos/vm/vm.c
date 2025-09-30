@@ -98,7 +98,13 @@ struct page *spt_find_page(struct supplemental_page_table *spt UNUSED,
 bool spt_insert_page(struct supplemental_page_table *spt UNUSED,
                      struct page *page UNUSED) {
   int succ = false;
-  /* TODO: Fill this function. */
+
+  struct hash_elem *result_elem =
+      hash_insert(&spt->page_table, &page->hash_elem);
+
+  if (result_elem == &page->hash_elem) {
+    succ = true;
+  }
 
   return succ;
 }
