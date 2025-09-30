@@ -387,3 +387,9 @@ void destruct_hash_elem(struct hash_elem *e, void *aux) {
 
   free(page);
 }
+/* 해시 요소 E에 대해 해시 값을 계산하여 반환한다.
+ * 이때 보조 데이터 AUX를 함께 사용한다. */
+uint64_t page_hash(const struct hash_elem *e, void *aux) {
+  struct page *p = hash_entry(e, struct page, hash_elem);
+  return hash_bytes(&p->va, sizeof p->va);
+}

@@ -60,7 +60,8 @@
       "cinttypes": "c",
       "cstdbool": "c",
       "typeinfo": "c",
-      "gdt.h": "c"
+      "gdt.h": "c",
+      "malloc.h": "c"
     },
   /* 포맷팅 설정 */
   "editor.formatOnSave": true, // 파일 저장(ctrl+s)할 때 자동 포맷팅
