@@ -239,7 +239,7 @@ static bool vm_do_claim_page(struct page *page) {
 
 void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
   ASSERT(spt != NULL);
-  hash_init(&spt->page_table, hash_hash_func, hash_less_func, NULL);
+  hash_init(&spt->page_table, page_hash, page_less, NULL);
 }
 
 /* Copy supplemental page table from src to dst */
@@ -254,13 +254,13 @@ void supplemental_page_table_kill(struct supplemental_page_table *spt) {
    * TODO: writeback all the modified contents to the storage. */
 }
 
-static uint64_t hash_hash_func(const struct hash_elem *e, void *aux) {
+static uint64_t page_hash(const struct hash_elem *e, void *aux) {
   struct page *p = hash_entry(e, struct page, hash_elem);
   return hash_bytes(&p->va, sizeof(p->va));
 }
 
-static bool hash_less_func(const struct hash_elem *a, const struct hash_elem *b,
-                           void *aux) {
+static bool page_less(const struct hash_elem *a, const struct hash_elem *b,
+                      void *aux) {
   struct page *p1 = hash_entry(a, struct page, hash_elem);
   struct page *p2 = hash_entry(a, struct page, hash_elem);
   return p1->va < p2->va;
