@@ -91,8 +91,7 @@ struct page *spt_find_page(struct supplemental_page_table *spt UNUSED,
   struct page *page = NULL;
   struct hash_elem *e = NULL;
 
-  page->va = va;
-
+  page->va = pg_round_down(va);
   e = hash_find(&spt->page_table, &page->hash_elem);
   if (e != NULL) {
     page = hash_entry(e, struct page, hash_elem);

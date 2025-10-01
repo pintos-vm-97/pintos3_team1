@@ -924,9 +924,16 @@ static bool install_page(void *upage, void *kpage, bool writable) {
  * upper block. */
 
 static bool lazy_load_segment(struct page *page, void *aux) {
-  /* TODO: Load the segment from the file */
-  /* TODO: This called when the first page fault occurs on address VA. */
-  /* TODO: VA is available when calling this function. */
+  struct lazy_load_aux *llaux = (struct lazy_load_aux *)aux;
+  void *kva = page->frame->kva;
+  off_t read_bytes = file_read_at(llaux->file, kva, (off_t)llaux->page_read_bytes,
+                            (off_t)llaux->ofs);
+
+  if (read_bytes != llaux->page_read_bytes){
+    free(aux);
+    return false;
+  }
+  memset(kva + read_bytes, 0, llaux->page_zero_bytes);
   free(aux);
 }
 
@@ -965,8 +972,10 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
     aux->page_zero_bytes = page_zero_bytes;
     aux->ofs = ofs;
     if (!vm_alloc_page_with_initializer(VM_ANON, upage, writable,
-                                        lazy_load_segment, aux))
+                                        lazy_load_segment, aux)) {
+      free(aux);
       return false;
+    }
 
     /* Advance. */
     read_bytes -= page_read_bytes;
