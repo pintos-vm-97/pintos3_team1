@@ -2,6 +2,7 @@
 
 #include "vm/vm.h"
 
+#include "include/threads/vaddr.h"
 #include "threads/malloc.h"
 #include "threads/mmu.h"
 #include "vm/inspect.h"
@@ -41,12 +42,14 @@ static struct frame *vm_get_victim(void);
 static bool vm_do_claim_page(struct page *page);
 static struct frame *vm_evict_frame(void);
 
-/* Create the pending page object with initializer. If you want to create a
- * page, do not create it directly and make it through this function or
- * `vm_alloc_page`. */
+/* 초기화 함수를 가진 "대기(pending)" 페이지 객체를 생성한다.
+ * 새로운 페이지를 만들고 싶다면, 직접 생성하지 말고
+ * 반드시 이 함수나 `vm_alloc_page`를 통해 생성해야 한다.
+ * aux free 책임을 어디서 질건지 체크 */
 bool vm_alloc_page_with_initializer(enum vm_type type, void *upage,
                                     bool writable, vm_initializer *init,
                                     void *aux) {
+  // 외부에서 uninit type 날리면 안됨.
   ASSERT(VM_TYPE(type) != VM_UNINIT)
 
   struct supplemental_page_table *spt = &thread_current()->spt;
@@ -88,21 +91,20 @@ err:
 /* Find VA from spt and return page. On error, return NULL. */
 struct page *spt_find_page(struct supplemental_page_table *spt UNUSED,
                            void *va UNUSED) {
-  struct page *page;
+  struct page *temp_page;
+  struct page *page = NULL;
   struct hash_elem *e = NULL;
 
-  page->va = pg_round_down(va);
-  e = hash_find(&spt->page_table, &page->hash_elem);
+  temp_page->va = pg_round_down(va);
+  e = hash_find(&spt->page_table, &temp_page->hash_elem);
   if (e != NULL) {
     page = hash_entry(e, struct page, hash_elem);
   }
-
   return page;
 }
 
 /* Insert PAGE into spt with validation. */
-bool spt_insert_page(struct supplemental_page_table *spt UNUSED,
-                     struct page *page UNUSED) {
+bool spt_insert_page(struct supplemental_page_table *spt, struct page *page) {
   int succ = false;
 
   struct hash_elem *result_elem =
@@ -116,8 +118,11 @@ bool spt_insert_page(struct supplemental_page_table *spt UNUSED,
 }
 
 void spt_remove_page(struct supplemental_page_table *spt, struct page *page) {
-  vm_dealloc_page(page);
-  return true;
+  struct hash_elem *he = hash_delete(&spt->page_table, &page->hash_elem);
+  if (he != NULL) {
+    // double free 위험
+    vm_dealloc_page(page);
+  }
 }
 
 /* Get the struct frame, that will be evicted. */
@@ -189,7 +194,7 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 /* Free the page.
  * DO NOT MODIFY THIS FUNCTION. */
 void vm_dealloc_page(struct page *page) {
-  destroy(page);
+  page_destroy(page);
   free(page);
 }
 
@@ -231,7 +236,9 @@ static bool vm_do_claim_page(struct page *page) {
 }
 
 /* Initialize new supplemental page table */
+
 void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
+  ASSERT(spt != NULL);
   hash_init(&spt->page_table, hash_hash_func, hash_less_func, NULL);
 }
 
@@ -240,7 +247,9 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
                                   struct supplemental_page_table *src UNUSED) {}
 
 /* Free the resource hold by the supplemental page table */
-void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED) {
+void supplemental_page_table_kill(struct supplemental_page_table *spt) {
+  ASSERT(spt != NULL);
+  hash_clear(&spt->page_table, destruct_hash_elem);
   /* TODO: Destroy all the supplemental_page_table hold by thread and
    * TODO: writeback all the modified contents to the storage. */
 }
