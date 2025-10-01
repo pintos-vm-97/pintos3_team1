@@ -935,27 +935,29 @@ static bool lazy_load_segment(struct page *page, void *aux) {
   }
   memset(kva + read_bytes, 0, llaux->page_zero_bytes);
   free(aux);
+  return true;
 }
 
-/* Loads a segment starting at offset OFS in FILE at address
- * UPAGE.  In total, READ_BYTES + ZERO_BYTES bytes of virtual
- * memory are initialized, as follows:
+/* FILE의 OFS(offset)부터 시작하는 세그먼트를 UPAGE 주소에 로드한다.
+ * 전체적으로 READ_BYTES + ZERO_BYTES 크기의 가상 메모리가 다음과 같이
+ * 초기화된다:
+ * - UPAGE에서 시작하는 READ_BYTES 만큼은 FILE에서 OFS부터 읽어와 채운다.
+ * - UPAGE + READ_BYTES 지점부터 ZERO_BYTES 만큼은 0으로 채운다.
  *
- * - READ_BYTES bytes at UPAGE must be read from FILE
- * starting at offset OFS.
+ * 이 함수로 초기화된 페이지들은 WRITABLE이 true이면 사용자 프로세스에서
+ * 쓰기 가능해야 하고, 그렇지 않으면 읽기 전용이어야 한다.
  *
- * - ZERO_BYTES bytes at UPAGE + READ_BYTES must be zeroed.
- *
- * The pages initialized by this function must be writable by the
- * user process if WRITABLE is true, read-only otherwise.
- *
- * Return true if successful, false if a memory allocation error
- * or disk read error occurs. */
+ * 성공하면 true를 반환하고, 메모리 할당 실패나 디스크 읽기 오류가 발생하면
+ * false를 반환한다.
+ */
 static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
                          uint32_t read_bytes, uint32_t zero_bytes,
                          bool writable) {
+  /* 읽어야 할 바이트가 페이지 단위여야 함 */
   ASSERT((read_bytes + zero_bytes) % PGSIZE == 0);
+  /* upage가 페이지의 시작이어야 함 */
   ASSERT(pg_ofs(upage) == 0);
+  /* 읽어야 할 오프셋도 시작주소여야 함 */
   ASSERT(ofs % PGSIZE == 0);
 
   while (read_bytes > 0 || zero_bytes > 0) {
