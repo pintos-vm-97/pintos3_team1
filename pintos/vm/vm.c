@@ -60,7 +60,7 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage,
     if (page == NULL) {
       goto err;
     }
-
+    /* 페이지의 가상주소와 권한을 할당 */
     page->va = upage;
     page->writable = writable;
 
@@ -78,26 +78,39 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage,
         goto err;
     }
 
+    /* uninit 페이지로 초기화 후 spt테이블 삽입 */
     uninit_new(page, upage, init, type, aux, initializer);
     if (!spt_insert_page(spt, page)) {
       free(page);
       goto err;
     }
+    /* 성공했으면 true 반환 */
+    return true;
   }
+
+  /* if못들어갔으면 false */
+  return false;
+
 err:
   return false;
 }
 
 /* Find VA from spt and return page. On error, return NULL. */
-struct page *spt_find_page(struct supplemental_page_table *spt UNUSED,
-                           void *va UNUSED) {
+struct page *spt_find_page(struct supplemental_page_table *spt, void *va) {
   // va만 삽입한 가짜 hash_elem을 보내는 방식
   /* TODO: Fill this function. */
-  struct page *page = NULL;
+
+  /* va만 저장할 껍데기 페이지 */
+  struct page *temp_page;
+
+  /* 찾을 페이지의 elem*/
   struct hash_elem *e = NULL;
 
-  page->va = pg_round_down(va);
-  e = hash_find(&spt->page_table, &page->hash_elem);
+  /* e를 이용해 복구될 페이지 */
+  struct page *page = NULL;
+
+  temp_page->va = pg_round_down(va);
+  e = hash_find(&spt->page_table, &temp_page->hash_elem);
   if (e != NULL) {
     page = hash_entry(e, struct page, hash_elem);
   }
