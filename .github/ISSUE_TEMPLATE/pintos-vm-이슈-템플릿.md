@@ -1,19 +1,15 @@
 ---
 name: pintos VM 이슈 템플릿
 about: Describe this issue template's purpose here.
-title: 'Feat: '
+title: 'issue: '
 labels: ''
 assignees: ''
 
 ---
 
-# 목적 
+# 이슈
 
-# 접근 전략
-
-# 구현부
-
-# 트러블
+# 접근 목적
 
 # 고려할 점(option)
 
