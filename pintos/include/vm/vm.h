@@ -3,6 +3,7 @@
 #include <hash.h>
 #include <stdbool.h>
 
+#include "lib/kernel/hash.h"
 #include "threads/palloc.h"
 
 enum vm_type {
@@ -53,6 +54,7 @@ struct page {
   bool writable;
   /* 타입별 데이터는 union에 묶여 있다.
    * 각 함수는 현재 union 타입을 자동으로 감지한다. */
+
   union {
     struct uninit_page uninit;
     struct anon_page anon;
@@ -64,9 +66,11 @@ struct page {
 };
 
 /* The representation of "frame" */
+// 메타데이터 구조체 (관리용)
 struct frame {
   void *kva;
   struct page *page;
+  struct list_elem elem;
 };
 
 /* 페이지 동작을 정의한 함수 테이블.
@@ -89,7 +93,7 @@ struct page_operations {
  * We don't want to force you to obey any specific design for this struct.
  * All designs up to you for this. */
 struct supplemental_page_table {
-  struct hash hash;
+  struct hash page_table;
 };
 
 #include "threads/thread.h"
@@ -127,4 +131,4 @@ bool vm_claim_page(void *va);
 // ❌
 enum vm_type page_get_type(struct page *page);
 
-#endif /* VM_VM_H */
+#endif

@@ -44,6 +44,16 @@ static struct semaphore initd_sema;
 // extern → 다른 파일에 정의된 전역 변수를 여기서 참조하겠다는 의미
 extern bool thread_tests; /* threads/init.c 파일 안에서 정의되어 있다 */
 
+#ifdef VM
+struct lazy_load_aux {
+  struct file *file;
+  off_t ofs;
+  size_t page_read_bytes;
+  size_t page_zero_bytes;
+};
+
+#endif
+
 /* General process initializer for initd and other process. */
 static void process_init(void) {
   struct thread *current = thread_current();
@@ -58,7 +68,7 @@ static void process_init(void) {
 
   // 표준 입출력 0~2(stdin, stdout, stderr)를 건너뛰고, 일반 파일 fd는 3부터
   // 할당한다.
-  current->next_FD = 3;  // 다음에 배정할 파일 디스크립터 시작값 지정
+  current->next_FD = 3;       // 다음에 배정할 파일 디스크립터 시작값 지정
   current->stdin_count = 1;   // 기본 STDIN 하나가 열려 있음을 표시
   current->stdout_count = 1;  // 기본 STDOUT 하나가 열려 있음을 표시
   current->FDT[STDIN_FILENO] =
@@ -147,7 +157,7 @@ tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED) {
   // 자식 초기화가 실패했다면 부모는 fork 실패로 처리
   if (child->fork_status != 0) {
     list_remove(&child->child_elem);  // 부모 children 리스트에서 제거
-    sema_up(&child->exit_sema);  // 자식이 종료 루틴을 마칠 수 있게 깨움
+    sema_up(&child->exit_sema);       // 자식이 종료 루틴을 마칠 수 있게 깨움
     return TID_ERROR;
   }
 
@@ -275,12 +285,12 @@ static void __do_fork(void *aux) {
     }
     if (parent_file == stdin_file) {
       current->FDT[fd] = stdin_file;  // STDIN 더미 포인터 공유
-      current->stdin_count++;  // 자식이 보유한 STDIN 참조 수 누적
+      current->stdin_count++;         // 자식이 보유한 STDIN 참조 수 누적
       continue;
     }
     if (parent_file == stdout_file) {
       current->FDT[fd] = stdout_file;  // STDOUT 더미 포인터 공유
-      current->stdout_count++;  // 자식이 보유한 STDOUT 참조 수 누적
+      current->stdout_count++;         // 자식이 보유한 STDOUT 참조 수 누적
       continue;
     }
     current->FDT[fd] =
@@ -564,7 +574,7 @@ static bool load(const char *file_name, struct intr_frame *if_) {
     goto done;
   }
 
-  file_deny_write(file);  // 현재 실행중인 파일 쓰기 금지
+  file_deny_write(file);   // 현재 실행중인 파일 쓰기 금지
   t->running_file = file;  // 스레드의 running_file을 현재 파일로 설정
 
   /* Read and verify executable header. */
@@ -791,9 +801,9 @@ static void argument_stack(char *argv[], int argc, struct intr_frame *_if) {
 
   // 문자열을 스택에 역순으로 복사
   for (int i = argc - 1; i >= 0; i--) {
-    size_t len = strlen(argv[i]) + 1;  // 문자열 길이 + 널 문자 포함
-    _if->rsp -= len;                   // 스택 아래로 공간 확보
-    rsp_arr[i] = _if->rsp;  // 해당 문자열이 위치한 주소 저장
+    size_t len = strlen(argv[i]) + 1;        // 문자열 길이 + 널 문자 포함
+    _if->rsp -= len;                         // 스택 아래로 공간 확보
+    rsp_arr[i] = _if->rsp;                   // 해당 문자열이 위치한 주소 저장
     memcpy((void *)_if->rsp, argv[i], len);  // 스택에 문자열 복사
   }
 
@@ -810,7 +820,7 @@ static void argument_stack(char *argv[], int argc, struct intr_frame *_if) {
   }
 
   // NULL sentinel push (argv[argc] = NULL)
-  _if->rsp -= 8;  // 포인터 크기만큼 스택 아래로
+  _if->rsp -= 8;                                // 포인터 크기만큼 스택 아래로
   memset((void *)_if->rsp, 0, sizeof(char *));  // 0으로 채움 (NULL)
 
   // argv[i] 포인터들을 역순으로 push
@@ -835,7 +845,7 @@ static void argument_stack(char *argv[], int argc, struct intr_frame *_if) {
 
 struct thread *get_child_thread(tid_t child_tid) {
   struct thread *current_thread =
-      thread_current();  // 현재 실행 중인 스레드(=부모 스레드)를 가져옴
+      thread_current();          // 현재 실행 중인 스레드(=부모 스레드)를 가져옴
   struct thread *result = NULL;  // 결과를 저장할 포인터
 
   // 현재 스레드의 자식 리스트를 순회함
@@ -914,9 +924,17 @@ static bool install_page(void *upage, void *kpage, bool writable) {
  * upper block. */
 
 static bool lazy_load_segment(struct page *page, void *aux) {
-  /* TODO: Load the segment from the file */
-  /* TODO: This called when the first page fault occurs on address VA. */
-  /* TODO: VA is available when calling this function. */
+  struct lazy_load_aux *llaux = (struct lazy_load_aux *)aux;
+  void *kva = page->frame->kva;
+  off_t read_bytes = file_read_at(llaux->file, kva, (off_t)llaux->page_read_bytes,
+                            (off_t)llaux->ofs);
+
+  if (read_bytes != llaux->page_read_bytes){
+    free(aux);
+    return false;
+  }
+  memset(kva + read_bytes, 0, llaux->page_zero_bytes);
+  free(aux);
 }
 
 /* Loads a segment starting at offset OFS in FILE at address
@@ -948,14 +966,21 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
     size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
     /* TODO: Set up aux to pass information to the lazy_load_segment. */
-    void *aux = NULL;
+    struct lazy_load_aux *aux = malloc(sizeof(struct lazy_load_aux));
+    aux->file = file;
+    aux->page_read_bytes = page_read_bytes;
+    aux->page_zero_bytes = page_zero_bytes;
+    aux->ofs = ofs;
     if (!vm_alloc_page_with_initializer(VM_ANON, upage, writable,
-                                        lazy_load_segment, aux))
+                                        lazy_load_segment, aux)) {
+      free(aux);
       return false;
+    }
 
     /* Advance. */
     read_bytes -= page_read_bytes;
     zero_bytes -= page_zero_bytes;
+    ofs += page_read_bytes;
     upage += PGSIZE;
   }
   return true;
