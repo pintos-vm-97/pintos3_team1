@@ -1,6 +1,9 @@
 /* anon.c: Implementation of page for non-disk image (a.k.a. anonymous page). */
 
+#include <string.h>
+
 #include "devices/disk.h"
+#include "threads/vaddr.h"
 #include "vm/vm.h"
 
 /* DO NOT MODIFY BELOW LINE */
@@ -20,15 +23,22 @@ static const struct page_operations anon_ops = {
 /* Initialize the data for anonymous pages */
 void vm_anon_init(void) {
   /* TODO: Set up the swap_disk. */
-  swap_disk = NULL;
+  swap_disk = disk_get(1, 1);
 }
 
 /* Initialize the file mapping */
+// 일단 익명이니 0으로?
 bool anon_initializer(struct page *page, enum vm_type type, void *kva) {
+  if (type != VM_ANON) {
+    return false;
+  }
   /* Set up the handler */
   page->operations = &anon_ops;
 
-  struct anon_page *anon_page = &page->anon;
+  struct anon_page *anon_page = &page->anon;  // 요놈
+  memset(anon_page, 0, sizeof(anon_page));    // 메타데이터를 초기화
+  memset(kva, 0, PGSIZE);  // 익명 페이지랑 매핑된 실제 물리값들 초기화
+  return true;
 }
 
 /* Swap in the page by read contents from the swap disk. */
