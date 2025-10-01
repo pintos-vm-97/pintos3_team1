@@ -91,8 +91,7 @@ struct page *spt_find_page(struct supplemental_page_table *spt UNUSED,
   struct page *page = NULL;
   struct hash_elem *e = NULL;
 
-  page->va = va;
-
+  page->va = pg_round_down(va);
   e = hash_find(&spt->page_table, &page->hash_elem);
   if (e != NULL) {
     page = hash_entry(e, struct page, hash_elem);
@@ -144,7 +143,19 @@ static struct frame *vm_evict_frame(void) {
  * space.*/
 static struct frame *vm_get_frame(void) {
   struct frame *frame = NULL;
-  /* TODO: Fill this function. */
+  void *kva = palloc_get_page(PAL_USER | PAL_ZERO);
+  if (kva == NULL) {
+    frame = vm_evict_frame();
+  } else {
+    frame = malloc(sizeof(struct frame));
+    if (frame == NULL) {
+      palloc_free_page(kva);
+    }
+    frame->kva = kva;
+    frame->page = NULL;
+    // list_insert(frame->elem,
+    // todo : 나중에 LRU func만들고 list_insert_ordered하기
+  }
 
   ASSERT(frame != NULL);
   ASSERT(frame->page == NULL);
@@ -194,7 +205,6 @@ bool vm_claim_page(void *va UNUSED) {
 static bool vm_do_claim_page(struct page *page) {
   struct frame *frame = vm_get_frame();
 
-  /* Set links */
   frame->page = page;
   page->frame = frame;
 
