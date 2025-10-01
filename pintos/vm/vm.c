@@ -159,7 +159,8 @@ static struct frame *vm_evict_frame(void) {
 /* palloc() and get frame. If there is no available page, evict the page
  * and return it. This always return valid address. That is, if the user pool
  * memory is full, this function evicts the frame to get the available memory
- * space.*/
+ * space.
+ * 프레임을 malloc, kva를 palloc 하고 반환*/
 static struct frame *vm_get_frame(void) {
   struct frame *frame = NULL;
   void *kva = palloc_get_page(PAL_USER | PAL_ZERO);
@@ -188,19 +189,23 @@ static void vm_stack_growth(void *addr UNUSED) {}
 static bool vm_handle_wp(struct page *page UNUSED) {}
 
 /* Return true on success */
-bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
-                         bool user UNUSED, bool write UNUSED,
-                         bool not_present UNUSED) {
-  struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
-  struct page *page = NULL;
-  if (addr == NULL || is_kernel_vaddr(addr) || not_present) {
-    return false;
-  }
+bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr, bool user,
+                         bool write, bool not_present) {
+  /* addr 없으면 false*/
+  if (addr == NULL) return false;
+  /* 유저영역주소가 아니라면 (커널) false)*/
+  if (!user) return false;
+  /* PTE가 있는데 들어왔다면 false */
+  if (!not_present) return false;
 
+  struct supplemental_page_table *spt = &thread_current()->spt;
+  struct page *page = NULL;
   page = spt_find_page(spt, addr);
-  if (page == NULL) {
-    return false;
-  }
+
+  /* page가 없으면 false */
+  if (page == NULL) return false;
+  /* writable은 false인데 write가 true로 오면 false*/
+  if (!page->writable && write) return false;
 
   return vm_do_claim_page(page);
 }
