@@ -989,15 +989,36 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
 }
 
 /* Create a PAGE of stack at the USER_STACK. Return true on success. */
+/* TODO: Map the stack on stack_bottom and claim the page immediately.
+ * TODO: If success, set the rsp accordingly.
+ * TODO: You should mark the page is stack. */
+/* TODO: Your code goes here */
 static bool setup_stack(struct intr_frame *if_) {
   bool success = false;
   void *stack_bottom = (void *)(((uint8_t *)USER_STACK) - PGSIZE);
 
-  /* TODO: Map the stack on stack_bottom and claim the page immediately.
-   * TODO: If success, set the rsp accordingly.
-   * TODO: You should mark the page is stack. */
-  /* TODO: Your code goes here */
+  struct thread *cur = thread_current();
+  struct page *p = NULL;
 
-  return success;
+  // Marking : VM_MARKER로 스택 페이지인거 마킹
+  // 로드 예약 함수 실행
+  if (!vm_alloc_page_with_initializer(VM_MARKER_0 | VM_ANON, stack_bottom, true,
+                                      lazy_load_segment, NULL)) {
+    return false;
+  }
+
+  // page claim
+  if (!vm_claim_page(stack_bottom)) {
+    return false;
+  }
+
+  // va기준으로 제대로 page구현된거 확인 후 rsp 및 success 조정
+  p = pml4_get_page(cur->pml4, stack_bottom);
+  if (p != NULL) {
+    if_->rsp = stack_bottom;
+    success = true;
+  }
+
+  return true;
 }
 #endif /* VM */
