@@ -60,7 +60,8 @@
       "cinttypes": "c",
       "cstdbool": "c",
       "typeinfo": "c",
-      "gdt.h": "c"
+      "gdt.h": "c",
+      "vm.h": "c"
     },
   /* 포맷팅 설정 */
   "editor.formatOnSave": true,

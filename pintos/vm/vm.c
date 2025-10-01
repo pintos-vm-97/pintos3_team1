@@ -88,7 +88,7 @@ err:
 /* Find VA from spt and return page. On error, return NULL. */
 struct page *spt_find_page(struct supplemental_page_table *spt UNUSED,
                            void *va UNUSED) {
-  struct page *page = NULL;
+  struct page *page;
   struct hash_elem *e = NULL;
 
   page->va = pg_round_down(va);
@@ -194,11 +194,27 @@ void vm_dealloc_page(struct page *page) {
 }
 
 /* Claim the page that allocate on VA. */
-bool vm_claim_page(void *va UNUSED) {
+// GitBook : 주어진 VA에 페이지를 할당하고 해당 페이지에 프레임 할당
+// 근데 생각해보면 이미 page가 vm_alloc_page_with_initializer에서 malloc되어
+// 있을텐데?
+bool vm_claim_page(void *va) {
   struct page *page = NULL;
-  /* TODO: Fill this function */
 
-  return vm_do_claim_page(page);
+  if (va == NULL || is_kernel_vaddr(va)) {
+    return false;
+  }
+
+  page = spt_find_page(thread_current()->pml4, va);
+  if (page == NULL) {
+    return false;
+  }
+
+  bool is_success = vm_do_claim_page(page);  // 페이지에 프레임 할당
+  if (!is_success) {
+    free(page);
+  }
+
+  return is_success;
 }
 
 /* Claim the PAGE and set up the mmu. */
