@@ -105,8 +105,7 @@ struct page *spt_find_page(struct supplemental_page_table *spt UNUSED,
 }
 
 /* Insert PAGE into spt with validation. */
-bool spt_insert_page(struct supplemental_page_table *spt UNUSED,
-                     struct page *page UNUSED) {
+bool spt_insert_page(struct supplemental_page_table *spt, struct page *page) {
   int succ = false;
 
   struct hash_elem *result_elem =
@@ -120,7 +119,7 @@ bool spt_insert_page(struct supplemental_page_table *spt UNUSED,
 }
 
 void spt_remove_page(struct supplemental_page_table *spt, struct page *page) {
-  struct hash_elem *he = hash_delete(&spt->hash, &page->hash_elem);
+  struct hash_elem *he = hash_delete(&spt->page_table, &page->hash_elem);
   if (he != NULL) {
     // double free 위험
     vm_dealloc_page(page);
@@ -235,7 +234,7 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
 /* Free the resource hold by the supplemental page table */
 void supplemental_page_table_kill(struct supplemental_page_table *spt) {
   ASSERT(spt != NULL);
-  hash_clear(&spt->hash, destruct_hash_elem);
+  hash_clear(&spt->page_table, destruct_hash_elem);
   /* TODO: Destroy all the supplemental_page_table hold by thread and
    * TODO: writeback all the modified contents to the storage. */
 }
