@@ -253,15 +253,3 @@ void supplemental_page_table_kill(struct supplemental_page_table *spt) {
   /* TODO: Destroy all the supplemental_page_table hold by thread and
    * TODO: writeback all the modified contents to the storage. */
 }
-
-static uint64_t page_hash(const struct hash_elem *e, void *aux) {
-  struct page *p = hash_entry(e, struct page, hash_elem);
-  return hash_bytes(&p->va, sizeof(p->va));
-}
-
-static bool page_less(const struct hash_elem *a, const struct hash_elem *b,
-                      void *aux) {
-  struct page *p1 = hash_entry(a, struct page, hash_elem);
-  struct page *p2 = hash_entry(a, struct page, hash_elem);
-  return p1->va < p2->va;
-}

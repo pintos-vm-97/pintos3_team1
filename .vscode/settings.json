@@ -62,7 +62,11 @@
       "typeinfo": "c",
       "gdt.h": "c",
       "malloc.h": "c",
-      "uninit.h": "c"
+      "uninit.h": "c",
+      "hash.h": "c",
+      "vm.h": "c",
+      "palloc.h": "c",
+      "file.h": "c"
     },
   /* 포맷팅 설정 */
   "editor.formatOnSave": true,

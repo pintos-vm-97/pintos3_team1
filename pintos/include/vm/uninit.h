@@ -1,5 +1,7 @@
 #ifndef VM_UNINIT_H
 #define VM_UNINIT_H
+#include <stdbool.h>
+
 #include "vm/vm.h"
 
 struct page;
@@ -21,4 +23,5 @@ struct uninit_page {
 void uninit_new(struct page *page, void *va, vm_initializer *init,
                 enum vm_type type, void *aux,
                 bool (*initializer)(struct page *, enum vm_type, void *kva));
+
 #endif

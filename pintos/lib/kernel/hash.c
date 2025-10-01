@@ -360,8 +360,8 @@ static void remove_elem(struct hash *h, struct hash_elem *e) {
 }
 
 /* hash_elem을 va로 비교하는함수 */
-bool hash_elem_less(const struct hash_elem *a, const struct hash_elem *b,
-                    void *aux) {
+bool page_less(const struct hash_elem *a, const struct hash_elem *b,
+               void *aux) {
   ASSERT(a != NULL);
   ASSERT(b != NULL);
 

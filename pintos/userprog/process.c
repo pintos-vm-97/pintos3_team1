@@ -935,6 +935,7 @@ static bool lazy_load_segment(struct page *page, void *aux) {
   }
   memset(kva + read_bytes, 0, llaux->page_zero_bytes);
   free(aux);
+  return true;
 }
 
 /* Loads a segment starting at offset OFS in FILE at address
