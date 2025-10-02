@@ -121,7 +121,7 @@ bool spt_insert_page(struct supplemental_page_table *spt, struct page *page) {
   struct hash_elem *result_elem =
       hash_insert(&spt->page_table, &page->hash_elem);
 
-  if (result_elem == &page->hash_elem) {
+  if (result_elem == NULL) {
     succ = true;
   }
   return succ;
