@@ -1,6 +1,7 @@
 args-dbl-space FAIL
 args-multiple FAIL
 args-none FAIL
+create-bad-ptr PASS
 halt FAIL
 args-many FAIL
 args-single FAIL
