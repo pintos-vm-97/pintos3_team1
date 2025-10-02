@@ -1,84 +1,99 @@
 {
     "files.associations": {
-        "timer.h": "c",
-        "string.h": "c",
-        "thread.h": "c",
-        "syscall.h": "c",
-        "syscall-nr.h": "c",
-        "process.h": "c",
-        "interrupt.h": "c",
-        "*.inc": "c",
-        "lib.h": "c",
-        "unistd.h": "c",
-        "debug.h": "c",
-        "stdbool.h": "c",
-        "stddef.h": "c",
-        "algorithm": "c",
-        "array": "c",
-        "atomic": "c",
-        "bit": "c",
-        "cctype": "c",
-        "cerrno": "c",
-        "climits": "c",
-        "clocale": "c",
-        "cmath": "c",
-        "compare": "c",
-        "concepts": "c",
-        "cstdarg": "c",
-        "cstddef": "c",
-        "cstdint": "c",
-        "cstdio": "c",
-        "cstdlib": "c",
-        "cwchar": "c",
-        "cwctype": "c",
-        "deque": "c",
-        "string": "c",
-        "unordered_map": "c",
-        "vector": "c",
-        "exception": "c",
-        "functional": "c",
-        "iterator": "c",
-        "memory": "c",
-        "memory_resource": "c",
-        "numeric": "c",
-        "random": "c",
-        "string_view": "c",
-        "system_error": "c",
-        "tuple": "c",
-        "type_traits": "c",
-        "utility": "c",
-        "initializer_list": "c",
-        "ios": "c",
-        "iosfwd": "c",
-        "limits": "c",
-        "new": "c",
-        "numbers": "c",
-        "ostream": "c",
-        "queue": "c",
-        "stdexcept": "c",
-        "streambuf": "c",
-        "cinttypes": "c",
-        "cstdbool": "c",
-        "typeinfo": "c"
+      "timer.h": "c",
+      "string.h": "c",
+      "thread.h": "c",
+      "syscall.h": "c",
+      "syscall-nr.h": "c",
+      "process.h": "c",
+      "interrupt.h": "c",
+      "*.inc": "c",
+      "lib.h": "c",
+      "unistd.h": "c",
+      "debug.h": "c",
+      "stdbool.h": "c",
+      "stddef.h": "c",
+      "algorithm": "c",
+      "array": "c",
+      "atomic": "c",
+      "bit": "c",
+      "cctype": "c",
+      "cerrno": "c",
+      "climits": "c",
+      "clocale": "c",
+      "cmath": "c",
+      "compare": "c",
+      "concepts": "c",
+      "cstdarg": "c",
+      "cstddef": "c",
+      "cstdint": "c",
+      "cstdio": "c",
+      "cstdlib": "c",
+      "cwchar": "c",
+      "cwctype": "c",
+      "deque": "c",
+      "string": "c",
+      "unordered_map": "c",
+      "vector": "c",
+      "exception": "c",
+      "functional": "c",
+      "iterator": "c",
+      "memory": "c",
+      "memory_resource": "c",
+      "numeric": "c",
+      "random": "c",
+      "string_view": "c",
+      "system_error": "c",
+      "tuple": "c",
+      "type_traits": "c",
+      "utility": "c",
+      "initializer_list": "c",
+      "ios": "c",
+      "iosfwd": "c",
+      "limits": "c",
+      "new": "c",
+      "numbers": "c",
+      "ostream": "c",
+      "queue": "c",
+      "stdexcept": "c",
+      "streambuf": "c",
+      "cinttypes": "c",
+      "cstdbool": "c",
+      "typeinfo": "c",
+      "gdt.h": "c",
+      "malloc.h": "c",
+      "uninit.h": "c"
     },
   /* 포맷팅 설정 */
-  "editor.formatOnSave": true, // 파일 저장(ctrl+s)할 때 자동 포맷팅
+  "editor.formatOnSave": true,
+  // 파일 저장(ctrl+s)할 때 자동 포맷팅
   /* 들여쓰기 설정 */
   "editor.tabSize": 2,
   "editor.insertSpaces": true,
-  "editor.detectIndentation": false, // 항상 위의 들여쓰기 설정 사용(기본 설정 모두 무시)
+  "editor.detectIndentation": false,
+  // 항상 위의 들여쓰기 설정 사용(기본 설정 모두 무시)
   /* 공백 문자 설정 */
-  "editor.trimAutoWhitespace": true, // 자동 공백 문자 제거
-  "files.trimTrailingWhitespace": true, // 저장 시 행 끝 공백 제거
-  "files.trimFinalNewlines": true, // 파일 끝의 빈 줄 제거
+  "editor.trimAutoWhitespace": true,
+  // 자동 공백 문자 제거
+  "files.trimTrailingWhitespace": true,
+  // 저장 시 행 끝 공백 제거
+  "files.trimFinalNewlines": true,
+  // 파일 끝의 빈 줄 제거
   /* 줄바꿈 설정 */
-  "files.eol": "\n", // LF 사용
+  "files.eol": "\n",
+  // LF 사용
   /* C/C++ 특화 설정 */
-  "C_Cpp.clang_format_fallbackStyle": "Google", // 기본 스타일을 Google로 설정
-  "C_Cpp.clang_format_sortIncludes": false, // #include문 자동 정렬 활성화
+  "C_Cpp.clang_format_fallbackStyle": "Google",
+  // 기본 스타일을 Google로 설정
+  "C_Cpp.clang_format_sortIncludes": true,
+  // #include문 자동 정렬 활성화
   /* 기타 편의 설정 */
   "editor.minimap.enabled": false, // 미니맵 비활성화
   "editor.renderWhitespace": "boundary", // 공백 문자 시각화
   "editor.showFoldingControls": "always", // 항상 코드 접기 아이콘 표시
   "editor.wordWrap": "off", // 자동 줄바꿈 비활성화
+
+  "editor.defaultFormatter": "ms-vscode.cpptools",
+  "C_Cpp.clang_format_style": "file",
+
 }

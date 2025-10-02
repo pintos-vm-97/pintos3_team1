@@ -21,6 +21,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
 #include "list.h"
 
 /* 구분자 + 확장가능성 */
@@ -94,6 +95,7 @@ bool hash_empty(struct hash *);
 uint64_t hash_bytes(const void *, size_t);
 uint64_t hash_string(const char *);
 uint64_t hash_int(int);
+
 
 bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux);
 void destruct_hash_elem(struct hash_elem *e, void *aux);

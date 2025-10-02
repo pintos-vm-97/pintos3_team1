@@ -1,26 +1,28 @@
 #include "userprog/process.h"
+
 #include <debug.h>
 #include <inttypes.h>
 #include <round.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "userprog/gdt.h"
-#include "userprog/tss.h"
-#include "userprog/syscall.h"
+
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
+#include "intrinsic.h"
 #include "lib/stdio.h"
 #include "threads/flags.h"
 #include "threads/init.h"
 #include "threads/interrupt.h"
-#include "threads/palloc.h"
-#include "threads/thread.h"
-#include "threads/synch.h"
 #include "threads/mmu.h"
+#include "threads/palloc.h"
+#include "threads/synch.h"
+#include "threads/thread.h"
 #include "threads/vaddr.h"
-#include "intrinsic.h"
+#include "userprog/gdt.h"
+#include "userprog/syscall.h"
+#include "userprog/tss.h"
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -41,12 +43,16 @@ static void argument_stack(char *argv[], int argc, struct intr_frame *_if);
 static struct semaphore initd_sema;
 // extern → 다른 파일에 정의된 전역 변수를 여기서 참조하겠다는 의미
 extern bool thread_tests; /* threads/init.c 파일 안에서 정의되어 있다 */
+
+#ifdef VM
 struct lazy_load_aux {
   struct file *file;
   off_t ofs;
   size_t page_read_bytes;
   size_t page_zero_bytes;
 };
+
+#endif
 /* General process initializer for initd and other process. */
 static void process_init(void) {
   struct thread *current = thread_current();
@@ -68,7 +74,7 @@ static void process_init(void) {
       syscall_get_std_file(STDIN_FILENO);  // FDT[0]에 STDIN 더미 파일 객체 연결
   current->FDT[STDOUT_FILENO] = syscall_get_std_file(
       STDOUT_FILENO);  // FDT[1]에 STDOUT 더미 파일 객체 연결
-}
+      
 struct thread *get_child_thread(tid_t child_tid) {
   struct thread *current_thread =
       thread_current();          // 현재 실행 중인 스레드(=부모 스레드)를 가져옴
@@ -198,6 +204,7 @@ struct file *process_get_file(int fd) {
   }
   return current_thread
       ->FDT[fd];  // 유효한 fd라면 FDT에서 대응되는 파일 포인터 반환
+
 }
 
 /* FILE_NAME에서 불러온 "initd"라는 첫 번째 사용자 프로그램을 시작한다.
@@ -1065,25 +1072,29 @@ static bool lazy_load_segment(struct page *page, void *aux) {
   return true;
 }
 
-/* Loads a segment starting at offset OFS in FILE at address
- * UPAGE.  In total, READ_BYTES + ZERO_BYTES bytes of virtual
- * memory are initialized, as follows:
+/* FILE의 OFS(offset)부터 시작하는 세그먼트를 UPAGE 주소에 로드한다.
+ * 전체적으로 READ_BYTES + ZERO_BYTES 크기의 가상 메모리가 다음과 같이
+ * 초기화된다:
+ * - UPAGE에서 시작하는 READ_BYTES 만큼은 FILE에서 OFS부터 읽어와 채운다.
+ * - UPAGE + READ_BYTES 지점부터 ZERO_BYTES 만큼은 0으로 채운다.
  *
- * - READ_BYTES bytes at UPAGE must be read from FILE
- * starting at offset OFS.
- *
- * - ZERO_BYTES bytes at UPAGE + READ_BYTES must be zeroed.
+ * 이 함수로 초기화된 페이지들은 WRITABLE이 true이면 사용자 프로세스에서
+ * 쓰기 가능해야 하고, 그렇지 않으면 읽기 전용이어야 한다.
  *
  * The pages initialized by this function must be writable by the
  * user process if WRITABLE is true, read-only otherwise.
  *
  * Return true if successful, false if a memory allocation error
  * or disk read error occurs. */
+
 static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
                          uint32_t read_bytes, uint32_t zero_bytes,
                          bool writable) {
+  /* 읽어야 할 바이트가 페이지 단위여야 함 */
   ASSERT((read_bytes + zero_bytes) % PGSIZE == 0);
+  /* upage가 페이지의 시작이어야 함 */
   ASSERT(pg_ofs(upage) == 0);
+  /* 읽어야 할 오프셋도 시작주소여야 함 */
   ASSERT(ofs % PGSIZE == 0);
 
   while (read_bytes > 0 || zero_bytes > 0) {

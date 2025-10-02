@@ -1,13 +1,15 @@
 /* vm.c: Generic interface for virtual memory objects. */
 
-#include "threads/malloc.h"
 #include "vm/vm.h"
+
+#include "include/threads/vaddr.h"
+#include "threads/malloc.h"
+#include "threads/mmu.h"
 #include "vm/inspect.h"
 
 // 추가한부분
 #include "threads/vaddr.h"
 #include "threads/mmu.h"
-
 struct list frame_list;
 struct lock frame_lock;
 
@@ -61,7 +63,7 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage,
     if (page == NULL) {
       goto err;
     }
-
+    /* 페이지의 가상주소와 권한을 할당 */
     page->va = upage;
     page->writable = writable;
 
@@ -79,22 +81,37 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage,
         goto err;
     }
 
+    /* uninit 페이지로 초기화 후 spt테이블 삽입 */
     uninit_new(page, upage, init, type, aux, initializer);
     if (!spt_insert_page(spt, page)) {
       free(page);
       goto err;
     }
   }
+    /* 성공했으면 true 반환 */
+    return true;
+  }
+
+  /* if못들어갔으면 false */
+  return false;
+
 err:
   return false;
 }
 
 /* Find VA from spt and return page. On error, return NULL. */
-struct page *spt_find_page(struct supplemental_page_table *spt UNUSED,
-                           void *va UNUSED) {
+
+struct page *spt_find_page(struct supplemental_page_table *spt, void *va) {
+  // va만 삽입한 가짜 hash_elem을 보내는 방식
+  /* TODO: Fill this function. */
+  /* va만 저장할 껍데기 페이지 */
   struct page *temp_page;
-  struct page *page = NULL;
+
+  /* 찾을 페이지의 elem*/
   struct hash_elem *e = NULL;
+
+  /* e를 이용해 복구될 페이지 */
+  struct page *page = NULL;
 
   temp_page->va = pg_round_down(va);
   e = hash_find(&spt->page_table, &temp_page->hash_elem);
@@ -108,13 +125,13 @@ struct page *spt_find_page(struct supplemental_page_table *spt UNUSED,
 bool spt_insert_page(struct supplemental_page_table *spt, struct page *page) {
   int succ = false;
 
+
   struct hash_elem *result_elem =
       hash_insert(&spt->page_table, &page->hash_elem);
 
   if (result_elem == &page->hash_elem) {
     succ = true;
   }
-
   return succ;
 }
 
@@ -146,7 +163,8 @@ static struct frame *vm_evict_frame(void) {
 /* palloc() and get frame. If there is no available page, evict the page
  * and return it. This always return valid address. That is, if the user pool
  * memory is full, this function evicts the frame to get the available memory
- * space.*/
+ * space.
+ * 프레임을 malloc, kva를 palloc 하고 반환*/
 static struct frame *vm_get_frame(void) {
   struct frame *frame = NULL;
   void *kva = palloc_get_page(PAL_USER | PAL_ZERO);
@@ -175,19 +193,23 @@ static void vm_stack_growth(void *addr UNUSED) {}
 static bool vm_handle_wp(struct page *page UNUSED) {}
 
 /* Return true on success */
-bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
-                         bool user UNUSED, bool write UNUSED,
-                         bool not_present UNUSED) {
-  struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
-  struct page *page = NULL;
-  if (addr == NULL || is_kernel_vaddr(addr) || not_present) {
-    return false;
-  }
+bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr, bool user,
+                         bool write, bool not_present) {
+  /* addr 없으면 false*/
+  if (addr == NULL) return false;
+  /* 유저영역주소가 아니라면 (커널) false)*/
+  if (!user) return false;
+  /* PTE가 있는데 들어왔다면 false */
+  if (!not_present) return false;
 
+  struct supplemental_page_table *spt = &thread_current()->spt;
+  struct page *page = NULL;
   page = spt_find_page(spt, addr);
-  if (page == NULL) {
-    return false;
-  }
+
+  /* page가 없으면 false */
+  if (page == NULL) return false;
+  /* writable은 false인데 write가 true로 오면 false*/
+  if (!page->writable && write) return false;
 
   return vm_do_claim_page(page);
 }
@@ -241,6 +263,7 @@ static bool vm_do_claim_page(struct page *page) {
 void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
   ASSERT(spt != NULL);
   hash_init(&spt->page_table, page_hash, page_less, NULL);
+
 }
 
 /* Copy supplemental page table from src to dst */
@@ -254,3 +277,4 @@ void supplemental_page_table_kill(struct supplemental_page_table *spt) {
   /* TODO: Destroy all the supplemental_page_table hold by thread and
    * TODO: writeback all the modified contents to the storage. */
 }
+

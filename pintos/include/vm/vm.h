@@ -1,6 +1,9 @@
 #ifndef VM_VM_H
 #define VM_VM_H
+#include <hash.h>
 #include <stdbool.h>
+
+#include "lib/kernel/hash.h"
 #include "threads/palloc.h"
 #include "lib/kernel/hash.h"
 
@@ -25,9 +28,9 @@ enum vm_type {
   VM_MARKER_END = (1 << 31),
 };
 
-#include "vm/uninit.h"
 #include "vm/anon.h"
 #include "vm/file.h"
+#include "vm/uninit.h"
 #ifdef EFILESYS
 #include "filesys/page_cache.h"
 #endif
