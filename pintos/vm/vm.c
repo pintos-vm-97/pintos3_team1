@@ -161,15 +161,15 @@ static struct frame *vm_get_frame(void) {
   struct frame *frame = NULL;
   void *kva = palloc_get_page(PAL_USER | PAL_ZERO);
   if (kva == NULL) {
-    return vm_evict_frame();
+    frame = vm_evict_frame();
+  } else {
+    frame = malloc(sizeof(struct frame));
+    if (frame == NULL) {
+      palloc_free_page(kva);
+    }
+    frame->kva = kva;
+    frame->page = NULL;
   }
-
-  frame = malloc(sizeof(struct frame));
-  if (frame == NULL) {
-    palloc_free_page(kva);
-  }
-  frame->kva = kva;
-  frame->page = NULL;
   // list_insert(frame->elem,
   // todo : 나중에 LRU func만들고 list_insert_ordered하기
 
