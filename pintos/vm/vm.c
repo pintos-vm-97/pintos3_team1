@@ -242,8 +242,9 @@ static bool vm_do_claim_page(struct page *page) {
 
   /* TODO: Insert page table entry to map page's VA to frame's PA. */
   if (!pml4_set_page(thread_current()->pml4, page->va, frame->kva,
-                     page->writable))
+                     page->writable)) {
     return false;
+  }
 
   return swap_in(page, frame->kva);
 }
@@ -271,7 +272,7 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
 void supplemental_page_table_kill(struct supplemental_page_table *spt) {
   ASSERT(spt != NULL);
   // hash_clear();
-  hash_destroy(&spt->page_table, destruct_hash_elem)
+  hash_destroy(&spt->page_table, destruct_hash_elem);
   // 모든 자원 해제하라네? 뭐할까요? 일단 page, elem,
 
   /* TODO: Destroy all the supplemental_page_table hold by thread and
