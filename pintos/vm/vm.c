@@ -7,6 +7,9 @@
 #include "threads/mmu.h"
 #include "vm/inspect.h"
 
+// 추가한부분
+#include "threads/vaddr.h"
+#include "threads/mmu.h"
 struct list frame_list;
 struct lock frame_lock;
 
@@ -84,6 +87,7 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage,
       free(page);
       goto err;
     }
+  }
     /* 성공했으면 true 반환 */
     return true;
   }
@@ -96,6 +100,7 @@ err:
 }
 
 /* Find VA from spt and return page. On error, return NULL. */
+
 struct page *spt_find_page(struct supplemental_page_table *spt, void *va) {
   // va만 삽입한 가짜 hash_elem을 보내는 방식
   /* TODO: Fill this function. */
@@ -120,13 +125,13 @@ struct page *spt_find_page(struct supplemental_page_table *spt, void *va) {
 bool spt_insert_page(struct supplemental_page_table *spt, struct page *page) {
   int succ = false;
 
+
   struct hash_elem *result_elem =
       hash_insert(&spt->page_table, &page->hash_elem);
 
   if (result_elem == &page->hash_elem) {
     succ = true;
   }
-
   return succ;
 }
 
@@ -257,7 +262,8 @@ static bool vm_do_claim_page(struct page *page) {
 
 void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
   ASSERT(spt != NULL);
-  hash_init(&spt->page_table, hash_hash_func, hash_less_func, NULL);
+  hash_init(&spt->page_table, page_hash, page_less, NULL);
+
 }
 
 /* Copy supplemental page table from src to dst */
@@ -272,14 +278,3 @@ void supplemental_page_table_kill(struct supplemental_page_table *spt) {
    * TODO: writeback all the modified contents to the storage. */
 }
 
-static uint64_t hash_hash_func(const struct hash_elem *e, void *aux) {
-  struct page *p = hash_entry(e, struct page, hash_elem);
-  return hash_bytes(&p->va, sizeof(p->va));
-}
-
-static bool hash_less_func(const struct hash_elem *a, const struct hash_elem *b,
-                           void *aux) {
-  struct page *p1 = hash_entry(a, struct page, hash_elem);
-  struct page *p2 = hash_entry(a, struct page, hash_elem);
-  return p1->va < p2->va;
-}

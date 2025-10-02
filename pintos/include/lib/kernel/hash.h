@@ -1,5 +1,6 @@
 #ifndef __LIB_KERNEL_HASH_H
 #define __LIB_KERNEL_HASH_H
+
 /* 해시 테이블.
  *
  * 이 자료구조는 Pintos Project 3의 Tour 문서에 자세히 설명되어 있다.
@@ -95,8 +96,8 @@ uint64_t hash_bytes(const void *, size_t);
 uint64_t hash_string(const char *);
 uint64_t hash_int(int);
 
-bool hash_elem_less(const struct hash_elem *a, const struct hash_elem *b,
-                    void *aux);
+
+bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux);
 void destruct_hash_elem(struct hash_elem *e, void *aux);
 uint64_t page_hash(const struct hash_elem *e, void *aux);
 #endif /* lib/kernel/hash.h */

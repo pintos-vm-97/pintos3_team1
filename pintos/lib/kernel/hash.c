@@ -10,6 +10,7 @@
 #include "../debug.h"
 #include "include/vm/vm.h"
 #include "threads/malloc.h"
+#include "include/vm/vm.h"
 
 #define list_elem_to_hash_elem(LIST_ELEM) \
   list_entry(LIST_ELEM, struct hash_elem, list_elem)
@@ -360,8 +361,9 @@ static void remove_elem(struct hash *h, struct hash_elem *e) {
 }
 
 /* hash_elem을 va로 비교하는함수 */
-bool hash_elem_less(const struct hash_elem *a, const struct hash_elem *b,
-                    void *aux) {
+bool page_less(const struct hash_elem *a, const struct hash_elem *b,
+               void *aux) {
+
   ASSERT(a != NULL);
   ASSERT(b != NULL);
 
