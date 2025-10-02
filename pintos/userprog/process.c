@@ -900,6 +900,7 @@ static bool setup_stack(struct intr_frame *if_) {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 // 문자열 target을 공백(" ") 기준으로 잘라서 각 토큰(인자)을 argv 배열에
 // 저장하고, 인자의 개수를 반환하는 함수 예: target = "echo hello world" → argv
 // = ["echo", "hello", "world", NULL]
@@ -1031,6 +1032,8 @@ struct file *process_get_file(int fd) {
       ->FDT[fd];  // 유효한 fd라면 FDT에서 대응되는 파일 포인터 반환
 }
 =======
+=======
+>>>>>>> origin/dev
 // // 문자열 target을 공백(" ") 기준으로 잘라서 각 토큰(인자)을 argv 배열에
 // // 저장하고, 인자의 개수를 반환하는 함수 예: target = "echo hello world" →
 // argv
@@ -1165,7 +1168,10 @@ struct file *process_get_file(int fd) {
 //   return current_thread
 //       ->FDT[fd];  // 유효한 fd라면 FDT에서 대응되는 파일 포인터 반환
 // }
+<<<<<<< HEAD
 >>>>>>> origin/rebuild
+=======
+>>>>>>> origin/dev
 
 /* Adds a mapping from user virtual address UPAGE to kernel
  * virtual address KPAGE to the page table.
@@ -1204,25 +1210,29 @@ static bool lazy_load_segment(struct page *page, void *aux) {
   return true;
 }
 
-/* Loads a segment starting at offset OFS in FILE at address
- * UPAGE.  In total, READ_BYTES + ZERO_BYTES bytes of virtual
- * memory are initialized, as follows:
+/* FILE의 OFS(offset)부터 시작하는 세그먼트를 UPAGE 주소에 로드한다.
+ * 전체적으로 READ_BYTES + ZERO_BYTES 크기의 가상 메모리가 다음과 같이
+ * 초기화된다:
+ * - UPAGE에서 시작하는 READ_BYTES 만큼은 FILE에서 OFS부터 읽어와 채운다.
+ * - UPAGE + READ_BYTES 지점부터 ZERO_BYTES 만큼은 0으로 채운다.
  *
- * - READ_BYTES bytes at UPAGE must be read from FILE
- * starting at offset OFS.
- *
- * - ZERO_BYTES bytes at UPAGE + READ_BYTES must be zeroed.
+ * 이 함수로 초기화된 페이지들은 WRITABLE이 true이면 사용자 프로세스에서
+ * 쓰기 가능해야 하고, 그렇지 않으면 읽기 전용이어야 한다.
  *
  * The pages initialized by this function must be writable by the
  * user process if WRITABLE is true, read-only otherwise.
  *
  * Return true if successful, false if a memory allocation error
  * or disk read error occurs. */
+
 static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
                          uint32_t read_bytes, uint32_t zero_bytes,
                          bool writable) {
+  /* 읽어야 할 바이트가 페이지 단위여야 함 */
   ASSERT((read_bytes + zero_bytes) % PGSIZE == 0);
+  /* upage가 페이지의 시작이어야 함 */
   ASSERT(pg_ofs(upage) == 0);
+  /* 읽어야 할 오프셋도 시작주소여야 함 */
   ASSERT(ofs % PGSIZE == 0);
 
   while (read_bytes > 0 || zero_bytes > 0) {
