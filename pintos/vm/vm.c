@@ -2,11 +2,8 @@
 
 #include "vm/vm.h"
 
-#include "include/threads/vaddr.h"
 #include "threads/malloc.h"
-#include "threads/mmu.h"
 #include "vm/inspect.h"
-
 // 추가한부분
 #include "threads/vaddr.h"
 #include "threads/mmu.h"
@@ -88,12 +85,8 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage,
       goto err;
     }
   }
-    /* 성공했으면 true 반환 */
-    return true;
-  }
-
-  /* if못들어갔으면 false */
-  return false;
+  /* 성공했으면 true 반환 */
+  return true;
 
 err:
   return false;
@@ -124,7 +117,6 @@ struct page *spt_find_page(struct supplemental_page_table *spt, void *va) {
 /* Insert PAGE into spt with validation. */
 bool spt_insert_page(struct supplemental_page_table *spt, struct page *page) {
   int succ = false;
-
 
   struct hash_elem *result_elem =
       hash_insert(&spt->page_table, &page->hash_elem);
@@ -263,7 +255,6 @@ static bool vm_do_claim_page(struct page *page) {
 void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
   ASSERT(spt != NULL);
   hash_init(&spt->page_table, page_hash, page_less, NULL);
-
 }
 
 /* Copy supplemental page table from src to dst */
@@ -277,4 +268,3 @@ void supplemental_page_table_kill(struct supplemental_page_table *spt) {
   /* TODO: Destroy all the supplemental_page_table hold by thread and
    * TODO: writeback all the modified contents to the storage. */
 }
-
