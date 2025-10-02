@@ -79,7 +79,6 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage,
 
     /* uninit 페이지로 초기화 후 spt테이블 삽입 */
     uninit_new(page, upage, init, type, aux, initializer);
-    page->writable = writable;
 
     if (!spt_insert_page(spt, page)) {
       free(page);
