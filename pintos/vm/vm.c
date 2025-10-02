@@ -230,12 +230,7 @@ bool vm_claim_page(void *va) {
     return false;
   }
 
-  bool is_success = vm_do_claim_page(page);  // 페이지에 프레임 할당
-  if (!is_success) {
-    vm_dealloc_page(page);
-  }
-
-  return is_success;
+  return vm_do_claim_page(page);  // 페이지에 프레임 할당
 }
 
 /* Claim the PAGE and set up the mmu. */
