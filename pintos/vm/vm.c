@@ -275,7 +275,10 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
 /* Free the resource hold by the supplemental page table */
 void supplemental_page_table_kill(struct supplemental_page_table *spt) {
   ASSERT(spt != NULL);
-  hash_clear(&spt->page_table, destruct_hash_elem);
+  // hash_clear();
+  hash_destroy(&spt->page_table, destruct_hash_elem)
+  // 모든 자원 해제하라네? 뭐할까요? 일단 page, elem,
+
   /* TODO: Destroy all the supplemental_page_table hold by thread and
    * TODO: writeback all the modified contents to the storage. */
 }
