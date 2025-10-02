@@ -376,10 +376,11 @@ bool page_less(const struct hash_elem *a, const struct hash_elem *b,
  * 이때 보조 데이터 AUX를 함께 사용한다. */
 typedef void hash_action_func(struct hash_elem *e, void *aux);
 
+// GitBook 曰 : pml4,랑 palloc된 메모리(frame)는 신경쓰지 마라 (호출자가 알아서
+// 제거할 것)
 void destruct_hash_elem(struct hash_elem *e, void *aux) {
   ASSERT(e != NULL);
   struct page *page = hash_entry(e, struct page, hash_elem);
-  // 여기서 프레임도 삭제해야함
   vm_dealloc_page(page);  // 메크로 사용 깔끔
 }
 /* 해시 요소 E에 대해 해시 값을 계산하여 반환한다.
