@@ -2,11 +2,11 @@
 
 #include "vm/vm.h"
 
-#include "include/threads/vaddr.h"
 #include "threads/malloc.h"
-#include "threads/mmu.h"
 #include "vm/inspect.h"
-
+// 추가한부분
+#include "threads/vaddr.h"
+#include "threads/mmu.h"
 struct list frame_list;
 struct lock frame_lock;
 
