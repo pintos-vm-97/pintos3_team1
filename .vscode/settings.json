@@ -67,7 +67,8 @@
     "vm.h": "c",
     "palloc.h": "c",
     "file.h": "c",
-    "anon.h": "c"
+    "anon.h": "c",
+    "main.h": "c"
   },
   /* 포맷팅 설정 */
   "editor.formatOnSave": true,

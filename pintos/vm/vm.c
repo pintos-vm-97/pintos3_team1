@@ -238,16 +238,14 @@ bool vm_try_handle_fault(struct intr_frame *f, void *addr, bool user,
 
 // 스택 성장 조건 : 스택 bottot에서 어느정도 가깝고 최대스택크기 안 넘어야 됨
 bool can_grow_stack(const struct intr_frame *f, void *addr) {
-  uintptr_t fa_bottom = (uintptr_t)addr;  // fault address
+  uintptr_t fault_addr = (uintptr_t)addr;  // fault address
   uintptr_t rsp = (uintptr_t)f->rsp;
   uintptr_t stack_top = (uintptr_t)USER_STACK;
 
-  if (fa_bottom >= stack_top) return false;  // 스택 위 접근
-  if (fa_bottom >= rsp) return false;        // 스택 내 접근
-  if ((rsp - fa_bottom) > (uintptr_t)32)
-    return false;  // 가까운지 먼지 (32byte Cuz 4B)
+  if (fault_addr >= stack_top) return false;  // 스택 위 접근
+  if (fault_addr < rsp - 32) return false;    // 가까운지 먼지 (32byte Cuz 4B)
 
-  uintptr_t stack_size = stack_top - fa_bottom;
+  uintptr_t stack_size = stack_top - fault_addr;
   if (stack_size > MAX_STACK_SIZE) return false;  // 최대 스택 크기 초과
 
   return true;
