@@ -33,7 +33,7 @@ struct lock filesys_lock;  // 파일 시스템 동기화용 전역 락
 #define STDERR_FILENO 2  // 표준 에러 파일 디스크립터 번호
 #endif
 
-static struct file stdin_dummy;  // STDIN을 나타내기 위한 더미 file 구조체
+static struct file stdin_dummy;   // STDIN을 나타내기 위한 더미 file 구조체
 static struct file stdout_dummy;  // STDOUT을 나타내기 위한 더미 file 구조체
 
 void syscall_entry(void);
@@ -222,7 +222,7 @@ int syscall_dup2(int oldfd, int newfd) {
 
   lock_acquire(&filesys_lock);  // 일반 파일 공유 시 dup_count 갱신을 보호하기
                                 // 위한 락 획득
-  old_file->dup_count++;  // 동일 파일을 가리키는 추가 참조를 기록
+  old_file->dup_count++;        // 동일 파일을 가리키는 추가 참조를 기록
   lock_release(&filesys_lock);  // dup_count 갱신 후 락 해제
 
   current->FDT[newfd] = old_file;  // 새 fd가 원래 파일 객체를 공유하도록 설정
@@ -282,7 +282,7 @@ void syscall_close(int fd) {
       current->stdin_count--;  // STDIN 참조 카운트 감소
     }
     current->FDT[fd] = NULL;  // 현재 fd 슬롯을 비워서 닫힘을 표시
-    return;  // 표준 입력은 더 이상 처리할 필요 없음
+    return;                   // 표준 입력은 더 이상 처리할 필요 없음
   }
 
   if (file == stdout_file) {
@@ -290,10 +290,10 @@ void syscall_close(int fd) {
       current->stdout_count--;  // STDOUT 참조 카운트 감소
     }
     current->FDT[fd] = NULL;  // 현재 fd 슬롯을 비워서 닫힘을 표시
-    return;  // 표준 출력은 더 이상 처리할 필요 없음
+    return;                   // 표준 출력은 더 이상 처리할 필요 없음
   }
 
-  current->FDT[fd] = NULL;  // 일반 파일의 경우 우선 FDT에서 제거
+  current->FDT[fd] = NULL;      // 일반 파일의 경우 우선 FDT에서 제거
   lock_acquire(&filesys_lock);  // 파일 객체 공유 보호를 위해 락 획득
 
   if (file->dup_count > 0) {
@@ -302,7 +302,7 @@ void syscall_close(int fd) {
     return;                       // 실제 파일은 닫지 않음
   }
 
-  file_close(file);  // 더 이상 참조가 없으니 파일 닫기 수행
+  file_close(file);             // 더 이상 참조가 없으니 파일 닫기 수행
   lock_release(&filesys_lock);  // 파일 연산 후 락 해제
 }
 
@@ -310,7 +310,7 @@ int syscall_write(int fd, const void *buffer, unsigned size) {
   vali_pointer(buffer, size);  // 사용자 버퍼가 유효한 커널 접근 범위인지 확인
 
   struct thread *current = thread_current();  // 현재 스레드 포인터 확보
-  struct file *file = process_get_file(fd);  // fd에 대응되는 파일 객체 조회
+  struct file *file = process_get_file(fd);   // fd에 대응되는 파일 객체 조회
   struct file *stdin_file =
       syscall_get_std_file(STDIN_FILENO);  // STDIN 더미 파일 포인터 준비
   struct file *stdout_file =
@@ -338,7 +338,7 @@ int syscall_write(int fd, const void *buffer, unsigned size) {
 
   lock_acquire(&filesys_lock);  // 파일 시스템 접근 보호를 위해 락 획득
   int bytes_write = file_write(file, buffer, size);  // 파일에 데이터 쓰기 수행
-  lock_release(&filesys_lock);  // 파일 연산 후 락 해제
+  lock_release(&filesys_lock);                       // 파일 연산 후 락 해제
 
   if (bytes_write < 0) {
     return -1;  // 쓰기가 실패했다면 오류 반환
@@ -351,7 +351,7 @@ int syscall_read(int fd, void *buffer, unsigned size) {
   vali_pointer(buffer, size);  // 사용자 버퍼가 커널에서 접근 가능한지 확인
 
   struct thread *current = thread_current();  // 현재 스레드 포인터 확보
-  struct file *file = process_get_file(fd);  // fd에 연결된 파일 객체 조회
+  struct file *file = process_get_file(fd);   // fd에 연결된 파일 객체 조회
   struct file *stdin_file =
       syscall_get_std_file(STDIN_FILENO);  // STDIN 더미 파일 포인터 준비
   struct file *stdout_file =
@@ -381,7 +381,7 @@ int syscall_read(int fd, void *buffer, unsigned size) {
 
   lock_acquire(&filesys_lock);  // 파일 시스템 접근 보호를 위해 락 획득
   int bytes_read = file_read(file, buffer, size);  // 파일에서 데이터 읽어오기
-  lock_release(&filesys_lock);  // 파일 연산 후 락 해제
+  lock_release(&filesys_lock);                     // 파일 연산 후 락 해제
 
   return bytes_read;  // 실제로 읽은 바이트 수 반환
 }
@@ -454,7 +454,7 @@ void vali_pointer(const void *user_addr, size_t size) {
   }
 
   const uint8_t *check_ptr = user_addr;  // 현재 검사할 위치 (byte 단위 포인터)
-  size_t byte_left = size;  // 검사해야 할 남은 바이트 수
+  size_t byte_left = size;               // 검사해야 할 남은 바이트 수
 
   // 검사할 전체 영역을 페이지 단위로 나누어 한 페이지씩 접근 가능 여부를 확인
   while (byte_left > 0) {

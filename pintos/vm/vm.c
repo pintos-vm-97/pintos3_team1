@@ -7,6 +7,7 @@
 // 추가한부분
 #include "threads/vaddr.h"
 #include "threads/mmu.h"
+
 struct list frame_list;
 struct lock frame_lock;
 
@@ -41,6 +42,7 @@ enum vm_type page_get_type(struct page *page) {
 static struct frame *vm_get_victim(void);
 static bool vm_do_claim_page(struct page *page);
 static struct frame *vm_evict_frame(void);
+static bool can_grow_stack(const struct intr_frame *f, void *addr);
 
 /* 초기화 함수를 가진 "대기(pending)" 페이지 객체를 생성한다.
  * 새로운 페이지를 만들고 싶다면, 직접 생성하지 말고
@@ -96,18 +98,17 @@ err:
 /* Find VA from spt and return page. On error, return NULL. */
 
 struct page *spt_find_page(struct supplemental_page_table *spt, void *va) {
-  // va만 삽입한 가짜 hash_elem을 보내는 방식
-  /* TODO: Fill this function. */
+  /* upage가 페이지의 시작이어야 함 */
+  ASSERT(pg_ofs(va) == 0);
   /* va만 저장할 껍데기 페이지 */
   struct page temp_page;
-
   /* 찾을 페이지의 elem*/
   struct hash_elem *e = NULL;
 
   /* e를 이용해 복구될 페이지 */
   struct page *page = NULL;
 
-  temp_page.va = pg_round_down(va);
+  temp_page.va = va;
   e = hash_find(&spt->page_table, &temp_page.hash_elem);
   if (e != NULL) {
     page = hash_entry(e, struct page, hash_elem);
@@ -140,15 +141,24 @@ void spt_remove_page(struct supplemental_page_table *spt, struct page *page) {
 static struct frame *vm_get_victim(void) {
   struct frame *victim = NULL;
   /* TODO: The policy for eviction is up to you. */
+  if (list_empty(&frame_list)) {
+    return NULL;
+  }
 
-  return victim;
+  // 나중에 frame_list 구조 수정 : 제일 오래 사용안된게 앞에 오도록 (accessed,
+  // dirty bit 사용)
+  return list_entry(list_begin(&frame_list), struct frame, elem);
 }
 
 /* Evict one page and return the corresponding frame.
  * Return NULL on error.*/
 static struct frame *vm_evict_frame(void) {
   struct frame *victim UNUSED = vm_get_victim();
+  if (victim == NULL) {
+    return NULL;
+  }
   /* TODO: swap out the victim and return the evicted frame. */
+  // 해당 frame 참조하는 page들 참조 제거??
 
   return NULL;
 }
@@ -180,31 +190,67 @@ static struct frame *vm_get_frame(void) {
 }
 
 /* Growing the stack. */
-static void vm_stack_growth(void *addr UNUSED) {}
+// stack 성장 경우 : ANON | STACK 페이지 생성 및 claim
+static bool vm_stack_growth(void *addr UNUSED) {
+  ASSERT(pg_ofs(addr) == 0);
+
+  struct page *p = NULL;
+
+  if (!vm_alloc_page_with_initializer(VM_ANON | VM_MARKER_0, addr, true, NULL,
+                                      NULL)) {
+    return false;
+  }
+
+  if (!vm_claim_page(addr)) {
+    return false;
+  }
+
+  void *kva = pml4_get_page(thread_current()->pml4, addr);
+  return kva != NULL;
+}
 
 /* Handle the fault on write_protected page */
 static bool vm_handle_wp(struct page *page UNUSED) {}
 
 /* Return true on success */
-bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr, bool user,
+bool vm_try_handle_fault(struct intr_frame *f, void *addr, bool user,
                          bool write, bool not_present) {
-  /* addr 없으면 false*/
-  if (addr == NULL) return false;
-  /* 유저영역주소가 아니라면 (커널) false)*/
-  if (!is_user_vaddr(addr)) return false;
-  /* PTE가 있는데 들어왔다면 false */
-  if (!not_present) return false;
+  /* addr 없거나 유저영역주소가 아니거나 PTE 존재하는 경우 false*/
+  // stack성장 넣으면서 코드 길어질 것 같아서 if문 합침
+  if (addr == NULL || !is_user_vaddr(addr) || !not_present) return false;
 
   struct supplemental_page_table *spt = &thread_current()->spt;
   struct page *page = NULL;
-  page = spt_find_page(spt, addr);
+  void *upage = pg_round_down(addr);
 
-  /* page가 없으면 false */
-  if (page == NULL) return false;
-  /* writable은 false인데 write가 true로 오면 false*/
-  if (!page->writable && write) return false;
+  page = spt_find_page(spt, upage);
 
-  return vm_do_claim_page(page);
+  if (page) {
+    if (!page->writable && write) {
+      return false;  // writable은 false인데 write가 true로 오면 false
+    }
+
+    return vm_do_claim_page(page);
+  }
+  // page가 없으면 stack 확장 여부 판단 필요
+  return can_grow_stack(f, addr) ? vm_stack_growth(upage) : false;
+}
+
+// 스택 성장 조건 : 스택 bottot에서 어느정도 가깝고 최대스택크기 안 넘어야 됨
+bool can_grow_stack(const struct intr_frame *f, void *addr) {
+  uintptr_t fa_bottom = (uintptr_t)addr;  // fault address
+  uintptr_t rsp = (uintptr_t)f->rsp;
+  uintptr_t stack_top = (uintptr_t)USER_STACK;
+
+  if (fa_bottom >= stack_top) return false;  // 스택 위 접근
+  if (fa_bottom >= rsp) return false;        // 스택 내 접근
+  if ((rsp - fa_bottom) > (uintptr_t)32)
+    return false;  // 가까운지 먼지 (32byte Cuz 4B)
+
+  uintptr_t stack_size = stack_top - fa_bottom;
+  if (stack_size > MAX_STACK_SIZE) return false;  // 최대 스택 크기 초과
+
+  return true;
 }
 
 /* Free the page.
@@ -234,6 +280,11 @@ bool vm_claim_page(void *va) {
 }
 
 /* Claim the PAGE and set up the mmu. */
+/**
+ * Swapping구현 시 여기를 변경해야 하나?
+ * 이전 : page 즉시 할당 -> page 없으면 걍 die
+ * 변경해야 할 : LRU List확인하면서 page할당. page없으면 swapping 필요?
+ */
 static bool vm_do_claim_page(struct page *page) {
   struct frame *frame = vm_get_frame();
 
@@ -245,6 +296,7 @@ static bool vm_do_claim_page(struct page *page) {
                      page->writable)) {
     return false;
   }
+  // 연결 성공이니까 frame table추가?
 
   return swap_in(page, frame->kva);
 }
@@ -271,10 +323,11 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
 /* Free the resource hold by the supplemental page table */
 void supplemental_page_table_kill(struct supplemental_page_table *spt) {
   ASSERT(spt != NULL);
-  // hash_clear();
-  hash_destroy(&spt->page_table, destruct_hash_elem);
-  // 모든 자원 해제하라네? 뭐할까요? 일단 page, elem,
+  hash_clear(&spt->page_table, destruct_hash_elem);
+  // hash_destroy(&spt->page_table, destruct_hash_elem);
+  //  모든 자원 해제하라네? 뭐할까요? 일단 page, elem,
 
   /* TODO: Destroy all the supplemental_page_table hold by thread and
    * TODO: writeback all the modified contents to the storage. */
+  // TODO: file-backed일 때 dirty 시 쓰기 필요
 }

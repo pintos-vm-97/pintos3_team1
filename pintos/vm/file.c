@@ -31,6 +31,12 @@ static bool file_backed_swap_in(struct page *page, void *kva) {
 }
 
 /* Swap out the page by writeback contents to the file. */
+/**
+ * Dirty 확인 필요
+ * - Dirty 시 disk로 쓰기 작업 必
+ *
+ * spt에 elem 제거 必
+ */
 static bool file_backed_swap_out(struct page *page) {
   struct file_page *file_page UNUSED = &page->file;
 }

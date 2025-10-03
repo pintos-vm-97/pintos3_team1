@@ -8,6 +8,7 @@
 
 /* DO NOT MODIFY BELOW LINE */
 static struct disk *swap_disk;
+
 static bool anon_swap_in(struct page *page, void *kva);
 static bool anon_swap_out(struct page *page);
 static void anon_destroy(struct page *page);
@@ -45,9 +46,16 @@ bool anon_initializer(struct page *page, enum vm_type type, void *kva) {
 /* Swap in the page by read contents from the swap disk. */
 static bool anon_swap_in(struct page *page, void *kva) {
   struct anon_page *anon_page = &page->anon;
+  // page->uninit.init(page, )
+  return page->uninit.page_initializer(page, VM_ANON, kva);
 }
 
 /* Swap out the page by writing contents to the swap disk. */
+/**
+ * 현재 frame 내용을 swap space로 보내기(1페이지 8섹터 기록)
+ * PTE 해제 + frame 반환? or 분리?
+ * 페이지는 메모리가 아닌 swap slot보관 상태로 전환
+ */
 static bool anon_swap_out(struct page *page) {
   struct anon_page *anon_page = &page->anon;
 }

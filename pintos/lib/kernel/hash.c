@@ -362,8 +362,8 @@ static void remove_elem(struct hash *h, struct hash_elem *e) {
 /* hash_elem을 va로 비교하는함수 */
 bool page_less(const struct hash_elem *a, const struct hash_elem *b,
                void *aux) {
-  ASSERT(a != NULL);
-  ASSERT(b != NULL);
+  // ASSERT(a != NULL);
+  // ASSERT(b != NULL);
 
   struct page *page1 = hash_entry(a, struct page, hash_elem);
   struct page *page2 = hash_entry(b, struct page, hash_elem);
@@ -377,7 +377,7 @@ bool page_less(const struct hash_elem *a, const struct hash_elem *b,
 typedef void hash_action_func(struct hash_elem *e, void *aux);
 
 // GitBook 曰 : pml4,랑 palloc된 메모리(frame)는 신경쓰지 마라 (호출자가 알아서
-// 제거할 것)
+// 제거할 것 part supplemental_page_table_kill)
 void destruct_hash_elem(struct hash_elem *e, void *aux) {
   ASSERT(e != NULL);
   struct page *page = hash_entry(e, struct page, hash_elem);
