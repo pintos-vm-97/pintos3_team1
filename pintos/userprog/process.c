@@ -44,14 +44,6 @@ static struct semaphore initd_sema;
 // extern → 다른 파일에 정의된 전역 변수를 여기서 참조하겠다는 의미
 extern bool thread_tests; /* threads/init.c 파일 안에서 정의되어 있다 */
 
-#ifdef VM
-struct lazy_load_aux {
-  struct file *file;
-  off_t ofs;
-  size_t page_read_bytes;
-  size_t page_zero_bytes;
-};
-#endif
 /* General process initializer for initd and other process. */
 static void process_init(void) {
   struct thread *current = thread_current();

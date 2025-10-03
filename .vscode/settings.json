@@ -68,7 +68,8 @@
     "palloc.h": "c",
     "file.h": "c",
     "anon.h": "c",
-    "main.h": "c"
+    "main.h": "c",
+    "vaddr.h": "c"
   },
   /* 포맷팅 설정 */
   "editor.formatOnSave": true,
