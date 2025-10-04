@@ -482,6 +482,12 @@ void vali_pointer(const void *user_addr, size_t size) {
    - 사용자 영역에 속하며
    - 현재 프로세스의 페이지 테이블에 매핑되어 있는지 확인 */
 bool check_page(const void *user_addr) {
+  struct thread *t =thread_current();
+#ifdef VM
+    // VM: spt에서 페이지를 찾아 writable 여부를 확인하기(코드/세그먼트 영역에 쓰기 불가능하도록)
+    struct page *p = spt_find_page(&t->spt, pg_round_down(user_addr));
+    if (p != NULL) return p->writable;
+#endif
   return user_addr != NULL && is_user_vaddr(user_addr) &&
          pml4_get_page(thread_current()->pml4, user_addr) != NULL;
 }
