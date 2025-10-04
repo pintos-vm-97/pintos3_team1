@@ -16,6 +16,7 @@
 #include "threads/flags.h"
 #include "threads/interrupt.h"
 #include "threads/loader.h"
+#include "threads/malloc.h"
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "userprog/gdt.h"
@@ -94,6 +95,7 @@ void syscall_handler(struct intr_frame *f) {
       SYS_TELL,                   Report current position in a file.
       SYS_CLOSE                   Close a file
   */
+  thread_current()->user_rsp_snap_shot = f->rsp;
   switch ((int)f->R.rax)  // 시스템 콜 번호는 intr_frame의 R.rax에 담겨져서 옴
   {
     case SYS_HALT:
@@ -336,10 +338,7 @@ int syscall_write(int fd, const void *buffer, unsigned size) {
     return -1;  // 열려 있지 않은 fd이므로 실패
   }
 
-  lock_acquire(&filesys_lock);  // 파일 시스템 접근 보호를 위해 락 획득
   int bytes_write = file_write(file, buffer, size);  // 파일에 데이터 쓰기 수행
-  lock_release(&filesys_lock);                       // 파일 연산 후 락 해제
-
   if (bytes_write < 0) {
     return -1;  // 쓰기가 실패했다면 오류 반환
   }
@@ -350,40 +349,50 @@ int syscall_write(int fd, const void *buffer, unsigned size) {
 int syscall_read(int fd, void *buffer, unsigned size) {
   vali_pointer(buffer, size);  // 사용자 버퍼가 커널에서 접근 가능한지 확인
 
-  struct thread *current = thread_current();  // 현재 스레드 포인터 확보
-  struct file *file = process_get_file(fd);   // fd에 연결된 파일 객체 조회
-  struct file *stdin_file =
-      syscall_get_std_file(STDIN_FILENO);  // STDIN 더미 파일 포인터 준비
-  struct file *stdout_file =
-      syscall_get_std_file(STDOUT_FILENO);  // STDOUT 더미 파일 포인터 준비
+  struct thread *current = thread_current();
+  struct file *file = process_get_file(fd);
+  struct file *stdin_file = syscall_get_std_file(STDIN_FILENO);
+  struct file *stdout_file = syscall_get_std_file(STDOUT_FILENO);
 
   if (file == stdin_file) {
     if (current->stdin_count == 0) {
-      return -1;  // STDIN이 모두 닫혔다면 읽기 불가
+      return -1;
     }
-
-    char *dst = (char *)buffer;  // 입력 문자를 저장할 버퍼 포인터 준비
-
+    uint8_t *kbuf = malloc(size);
+    if (kbuf == NULL) {
+      return -1;
+    }
     for (unsigned i = 0; i < size; i++) {
-      dst[i] = input_getc();  // 키보드에서 한 글자씩 읽어 버퍼에 기록
+      kbuf[i] = input_getc();
     }
-
-    return size;  // 요청한 길이만큼 읽었으므로 그대로 반환
+    memcpy(buffer, kbuf, size);
+    free(kbuf);
+    return size;
   }
 
   if (file == stdout_file || fd == STDERR_FILENO) {
-    return -1;  // STDOUT/STDERR에서는 읽기를 지원하지 않음
+    return -1;
   }
 
   if (file == NULL) {
-    return -1;  // 열려 있지 않은 fd라면 실패
+    return -1;
   }
 
-  lock_acquire(&filesys_lock);  // 파일 시스템 접근 보호를 위해 락 획득
-  int bytes_read = file_read(file, buffer, size);  // 파일에서 데이터 읽어오기
-  lock_release(&filesys_lock);                     // 파일 연산 후 락 해제
+  // uint8_t *kbuf = malloc(size);
+  // if (kbuf == NULL) {
+  //   return -1;
+  // }
 
-  return bytes_read;  // 실제로 읽은 바이트 수 반환
+  //lock_acquire(&filesys_lock);
+  int bytes_read = file_read(file, buffer, size);
+  //lock_release(&filesys_lock);
+
+  // if (bytes_read > 0) {
+  //   memcpy(buffer, kbuf, (size_t)bytes_read);
+  // }
+  //free(kbuf);
+
+  return bytes_read;
 }
 
 int syscall_filesize(int fd) {
@@ -482,7 +491,8 @@ void vali_pointer(const void *user_addr, size_t size) {
    - 사용자 영역에 속하며
    - 현재 프로세스의 페이지 테이블에 매핑되어 있는지 확인 */
 bool check_page(const void *user_addr) {
-  if (user_addr == NULL || !is_user_vaddr(user_addr) || pml4_get_page(thread_current()->pml4, user_addr) == NULL){
+  // || pml4_get_page(thread_current()->pml4, user_addr) == NULL
+  if (user_addr == NULL || !is_user_vaddr(user_addr)){
     return false;
   }
 

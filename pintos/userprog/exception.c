@@ -6,6 +6,7 @@
 #include "intrinsic.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
 #include "userprog/gdt.h"
 #include "userprog/syscall.h"
 
@@ -140,6 +141,11 @@ static void page_fault(struct intr_frame *f) {
   /* For project 3 and later. */
   if (vm_try_handle_fault(f, fault_addr, user, write, not_present)) return;
 #endif
+
+  if (!user && is_user_vaddr(fault_addr)) {
+    syscall_exit(-1);
+    return;
+  }
 
   /* Count page faults. */
   page_fault_cnt++;

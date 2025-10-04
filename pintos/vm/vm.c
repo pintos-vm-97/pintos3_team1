@@ -42,7 +42,7 @@ enum vm_type page_get_type(struct page *page) {
 static struct frame *vm_get_victim(void);
 static bool vm_do_claim_page(struct page *page);
 static struct frame *vm_evict_frame(void);
-static bool can_grow_stack(const struct intr_frame *f, void *addr);
+static bool can_grow_stack(const struct intr_frame *f, void *addr, bool is_user_mode);
 
 /* 초기화 함수를 가진 "대기(pending)" 페이지 객체를 생성한다.
  * 새로운 페이지를 만들고 싶다면, 직접 생성하지 말고
@@ -233,13 +233,13 @@ bool vm_try_handle_fault(struct intr_frame *f, void *addr, bool user,
     return vm_do_claim_page(page);
   }
   // page가 없으면 stack 확장 여부 판단 필요
-  return can_grow_stack(f, addr) ? vm_stack_growth(upage) : false;
+  return can_grow_stack(f, addr, user) ? vm_stack_growth(upage) : false;
 }
 
 // 스택 성장 조건 : 스택 bottot에서 어느정도 가깝고 최대스택크기 안 넘어야 됨
-bool can_grow_stack(const struct intr_frame *f, void *addr) {
+bool can_grow_stack(const struct intr_frame *f, void *addr, bool is_user_mode) {
   uintptr_t fault_addr = (uintptr_t)addr;  // fault address
-  uintptr_t rsp = (uintptr_t)f->rsp;
+  uintptr_t rsp = is_user_mode ? (uintptr_t)f->rsp : thread_current()->user_rsp_snap_shot;
   uintptr_t stack_top = (uintptr_t)USER_STACK;
 
   if (fault_addr >= stack_top) return false;  // 스택 위 접근
