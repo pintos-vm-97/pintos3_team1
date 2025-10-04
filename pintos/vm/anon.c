@@ -39,7 +39,6 @@ bool anon_initializer(struct page *page, enum vm_type type, void *kva) {
   struct anon_page *anon_page = &page->anon;       // 요놈
   memset(anon_page, 0, sizeof(struct anon_page));  // 메타데이터를 초기화
   memset(kva, 0, PGSIZE);  // 익명 페이지랑 매핑된 실제 물리값들 초기화
-  page->writable = true;
   return true;
 }
 

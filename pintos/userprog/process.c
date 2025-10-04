@@ -1054,6 +1054,7 @@ static bool lazy_load_segment(struct page *page, void *aux) {
     free(aux);
     return false;
   }
+  page->writable = llaux->is_writable;
   memset(kva + read_bytes, 0, llaux->page_zero_bytes);
   free(aux);
   return true;
@@ -1097,6 +1098,7 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
     aux->page_read_bytes = page_read_bytes;
     aux->page_zero_bytes = page_zero_bytes;
     aux->ofs = ofs;
+    aux->is_writable = writable;
     if (!vm_alloc_page_with_initializer(VM_ANON, upage, writable,
                                         lazy_load_segment, aux)) {
       free(aux);

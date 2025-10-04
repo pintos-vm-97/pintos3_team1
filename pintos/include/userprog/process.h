@@ -9,6 +9,7 @@ struct lazy_load_aux {
   off_t ofs;
   size_t page_read_bytes;
   size_t page_zero_bytes;
+  bool is_writable;
 };
 #endif
 
