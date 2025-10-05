@@ -374,8 +374,7 @@ static bool copy_loaded_page(struct supplemental_page_table* dst,
 
 static bool copy_page(struct supplemental_page_table* dst, struct page* src) {
   bool copy_succ = false;
-  enum vm_type type = VM_TYPE(src->operations->type);
-  switch (type) {
+  switch (VM_TYPE(src->operations->type)) {
     case VM_UNINIT:
       copy_succ = copy_uninit_page(dst, src);
       break;

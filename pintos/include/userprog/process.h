@@ -11,6 +11,8 @@ struct lazy_load_aux {
   size_t page_zero_bytes;
   bool is_writable;
 };
+
+bool lazy_load_segment(struct page *page, void *aux);
 #endif
 
 tid_t process_create_initd(const char *file_name);

@@ -5,11 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b4973f47-407f-47f1-9440-004d47309a3e" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.vscode/settings.json" beforeDir="false" afterPath="$PROJECT_DIR$/.vscode/settings.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pintos/include/vm/anon.h" beforeDir="false" afterPath="$PROJECT_DIR$/pintos/include/vm/anon.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pintos/include/vm/file.h" beforeDir="false" afterPath="$PROJECT_DIR$/pintos/include/vm/file.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pintos/include/vm/uninit.h" beforeDir="false" afterPath="$PROJECT_DIR$/pintos/include/vm/uninit.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pintos/include/vm/vm.h" beforeDir="false" afterPath="$PROJECT_DIR$/pintos/include/vm/vm.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pintos/userprog/syscall.c" beforeDir="false" afterPath="$PROJECT_DIR$/pintos/userprog/syscall.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pintos/vm/.test_status" beforeDir="false" afterPath="$PROJECT_DIR$/pintos/vm/.test_status" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -19,21 +16,21 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "ARlegro"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;ARlegro&quot;
   }
-}]]></component>
+}</component>
   <component name="GithubPullRequestsUISettings"><![CDATA[{
   "selectedUrlAndAccountId": {
-    "url": "git@github.com:pintos-vm-97/pintos3_team1.git",
-    "accountId": "4498195e-7276-4db9-bc9f-4d77da701a28"
+    "url": "git@github.com:ARlegro/Pintos_VM_TEMP.git",
+    "accountId": "c3b7675d-cb84-4590-9844-f892f30550c4"
   }
 }]]></component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 2
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 2
+}</component>
   <component name="ProjectId" id="33SmzktmKi98R0DNny6bBUmTXQx" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -43,7 +40,7 @@
   "keyToString": {
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "ARlegro/feat/anon",
+    "git-widget-placeholder": "temp",
     "kotlin-language-version-configured": "true",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
@@ -70,6 +67,7 @@
       <option name="presentableId" value="Default" />
       <updated>1759319111447</updated>
       <workItem from="1759319113463" duration="885000" />
+      <workItem from="1759654284351" duration="624000" />
     </task>
     <servers />
   </component>
