@@ -30,7 +30,7 @@ bool file_backed_initializer(struct page *page, enum vm_type type, void *kva) {
   // };
   struct file_page *file_page = &page->file;
 
-  struct lazy_load_aux *aux = (struct lazy_load_aux *)page->file.aux;
+  // struct lazy_load_aux *aux = (struct lazy_load_aux *)page->file.aux;
   // struct lazy_load_aux *aux = page->uninit.aux =
 }
 

@@ -7,6 +7,7 @@
 // 추가한부분
 #include "threads/vaddr.h"
 #include "threads/mmu.h"
+#include "userprog/process.h"
 
 struct list frame_list;
 struct lock frame_lock;
@@ -42,17 +43,19 @@ enum vm_type page_get_type(struct page *page) {
 static struct frame *vm_get_victim(void);
 static bool vm_do_claim_page(struct page *page);
 static struct frame *vm_evict_frame(void);
-static bool can_grow_stack(const struct intr_frame *f, void *addr, bool is_user_mode);
+static bool can_grow_stack(const struct intr_frame *f, void *addr,
+                           bool is_user_mode);
 
 /* 초기화 함수를 가진 "대기(pending)" 페이지 객체를 생성한다.
  * 새로운 페이지를 만들고 싶다면, 직접 생성하지 말고
  * 반드시 이 함수나 `vm_alloc_page`를 통해 생성해야 한다.
  * aux free 책임을 어디서 질건지 체크 */
+/* init : 보통 lazy_load_segment 함수 넘어옴 */
 bool vm_alloc_page_with_initializer(enum vm_type type, void *upage,
                                     bool writable, vm_initializer *init,
                                     void *aux) {
-  // 외부에서 uninit type 날리면 안됨. ASSERT(VM_TYPE(type) != VM_UNINIT)
-
+  // 외부에서 uninit type 날리면 안됨.
+  // ASSERT(VM_TYPE(type) != VM_UNINIT);
   struct supplemental_page_table *spt = &thread_current()->spt;
 
   /* Check wheter the upage is already occupied or not. */
@@ -210,7 +213,7 @@ static bool vm_stack_growth(void *addr UNUSED) {
 }
 
 /* Handle the fault on write_protected page */
-static bool vm_handle_wp(struct page *page UNUSED) {}
+static bool vm_handle_wp(struct page *page UNUSED) { return true; }
 
 /* Return true on success */
 bool vm_try_handle_fault(struct intr_frame *f, void *addr, bool user,
@@ -239,7 +242,8 @@ bool vm_try_handle_fault(struct intr_frame *f, void *addr, bool user,
 // 스택 성장 조건 : 스택 bottot에서 어느정도 가깝고 최대스택크기 안 넘어야 됨
 bool can_grow_stack(const struct intr_frame *f, void *addr, bool is_user_mode) {
   uintptr_t fault_addr = (uintptr_t)addr;  // fault address
-  uintptr_t rsp = is_user_mode ? (uintptr_t)f->rsp : thread_current()->user_rsp_snap_shot;
+  uintptr_t rsp =
+      is_user_mode ? (uintptr_t)f->rsp : thread_current()->user_rsp_snap_shot;
   uintptr_t stack_top = (uintptr_t)USER_STACK;
 
   if (fault_addr >= stack_top) return false;  // 스택 위 접근
@@ -263,25 +267,18 @@ void vm_dealloc_page(struct page *page) {
 // 근데 생각해보면 이미 page가 vm_alloc_page_with_initializer에서 malloc되어
 // 있을텐데?
 bool vm_claim_page(void *va) {
-  struct page *page = NULL;
+  if (va == NULL || is_kernel_vaddr(va)) return false;
 
-  if (va == NULL || is_kernel_vaddr(va)) {
-    return false;
-  }
-  // spt를 넣어야함.
-  page = spt_find_page(&thread_current()->spt, va);
-  if (page == NULL) {
-    return false;
-  }
-
-  return vm_do_claim_page(page);  // 페이지에 프레임 할당
+  struct page *page = spt_find_page(&thread_current()->spt, va);
+  return page ? vm_do_claim_page(page) : false;  // 페이지에 프레임 할당
 }
 
 /* Claim the PAGE and set up the mmu. */
-/**
+/*
  * Swapping구현 시 여기를 변경해야 하나?
  * 이전 : page 즉시 할당 -> page 없으면 걍 die
- * 변경해야 할 : LRU List확인하면서 page할당. page없으면 swapping 필요?
+ * 변경해야 할 : 페이지 교체 알고리즘 활용하면 page할당. page없으면 swapping
+ * 필요?
  */
 static bool vm_do_claim_page(struct page *page) {
   struct frame *frame = vm_get_frame();
@@ -306,16 +303,93 @@ void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
   hash_init(&spt->page_table, page_hash, page_less, NULL);
 }
 
+static struct lazy_load_aux *copy_aux(const struct file_page *src) {
+  struct lazy_load_aux *aux = malloc(sizeof(struct lazy_load_aux));
+  if (aux == NULL) return NULL;
+  aux->file = file_reopen(src->file);
+  aux->page_read_bytes = src->page_read_bytes;
+  aux->page_zero_bytes = src->page_zero_bytes;
+  aux->ofs = src->ofs;
+  aux->is_writable = src->is_writable;
+  return aux;
+}
+
+static bool page_copy(struct supplemental_page_table *dst, struct page *src) {
+  // 공통 부분
+  // dst->operations = src->operations;
+  // dst->va = src->va;
+  // dst->writable = src->writable;
+  // dst->frame = NULL;
+
+  // 타입별로 다르게
+  enum vm_type type = src->operations->type;
+  void *va = src->va;
+  struct page *dst_page = NULL;
+  void *kva = NULL;
+
+  switch (VM_TYPE(type)) {
+    case VM_UNINIT:
+      if (vm_alloc_page_with_initializer(type, va, src->writable, NULL,
+                                         copy_aux(src))) {
+        return false;
+      }
+      break;
+
+    // 스택인 경우 (ANON + VM_MARKER_0) 나중에 생각
+    case VM_ANON:
+
+      if (vm_alloc_page_with_initializer(type, va, src->writable, NULL, NULL)) {
+        return false;
+      }
+
+      if (vm_claim_page(va)) {
+        return false;
+      }
+      dst_page = spt_find_page(dst, src->va);
+      if (dst_page == NULL) return false;
+
+      kva = dst_page->frame->kva;
+      memcpy(kva, src->frame->kva, PGSIZE);
+      break;
+
+    case VM_FILE:
+      if (vm_alloc_page_with_initializer(type, va, src->writable, NULL,
+                                         copy_aux(src))) {
+        return false;
+      }
+      if (vm_claim_page(va)) {
+        return false;
+      }
+
+      dst_page = spt_find_page(dst, src->va);
+      if (dst_page == NULL) return false;
+
+      kva = dst_page->frame->kva;
+      memcpy(kva, src->frame->kva, PGSIZE);
+      break;
+  }
+}
+
 /* Copy supplemental page table from src to dst */
+// 부모의 SPT 엔트리를 순회하면서 lazy load 정보까지 복사한다. */
 bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
                                   struct supplemental_page_table *src UNUSED) {
   struct hash_iterator i;
-  hash_first(&i, src);
+  hash_first(&i, &src->page_table);
 
   while (hash_next(&i)) {
     struct hash_elem *h = hash_cur(&i);
-    hash_insert(dst, h);
+
+    struct page *page = hash_entry(h, struct page, hash_elem);
+    if (page == NULL) return false;
+
+    bool succ = page_copy(dst, page);
+    if (!succ) {
+      hash_clear(&dst->page_table, destruct_hash_elem);
+      return false;
+    }
   }
+  return true;
 }
 
 /* Free the resource hold by the supplemental page table */
