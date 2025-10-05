@@ -30,11 +30,11 @@
 #define MAX_ARGS 128
 
 static void process_cleanup(void);
-static bool load(const char *file_name, struct intr_frame *if_);
-static void initd(void *f_name);
-static void __do_fork(void *);
-static int parse_args(char *, char *[]);
-static void argument_stack(char *argv[], int argc, struct intr_frame *_if);
+static bool load(const char* file_name, struct intr_frame* if_);
+static void initd(void* f_name);
+static void __do_fork(void*);
+static int parse_args(char*, char*[]);
+static void argument_stack(char* argv[], int argc, struct intr_frame* _if);
 
 /* 초기 사용자 프로세스를 위한 최소한의 동기화.
    이것은 커널이 첫 번째 사용자 프로세스가 종료될 때까지
@@ -46,7 +46,7 @@ extern bool thread_tests; /* threads/init.c 파일 안에서 정의되어 있다
 
 /* General process initializer for initd and other process. */
 static void process_init(void) {
-  struct thread *current = thread_current();
+  struct thread* current = thread_current();
 
   // 새 프로세스용 파일 디스크립터 테이블을 0으로 초기화된 상태로 준비
   current->FDT = palloc_get_multiple(
@@ -67,16 +67,16 @@ static void process_init(void) {
       STDOUT_FILENO);  // FDT[1]에 STDOUT 더미 파일 객체 연결
 }
 
-struct thread *get_child_thread(tid_t child_tid) {
-  struct thread *current_thread =
+struct thread* get_child_thread(tid_t child_tid) {
+  struct thread* current_thread =
       thread_current();          // 현재 실행 중인 스레드(=부모 스레드)를 가져옴
-  struct thread *result = NULL;  // 결과를 저장할 포인터
+  struct thread* result = NULL;  // 결과를 저장할 포인터
 
   // 현재 스레드의 자식 리스트를 순회함
-  for (struct list_elem *i = list_begin(&current_thread->children);
+  for (struct list_elem* i = list_begin(&current_thread->children);
        i != list_end(&current_thread->children); i = i->next) {
     // 리스트 요소 i를 thread 구조체로 변환
-    struct thread *t = list_entry(i, struct thread, child_elem);
+    struct thread* t = list_entry(i, struct thread, child_elem);
 
     // 자식 스레드의 tid가 찾고자 하는 child_tid와 같다면
     if (t->tid == child_tid) {
@@ -91,10 +91,10 @@ struct thread *get_child_thread(tid_t child_tid) {
 // 문자열 target을 공백(" ") 기준으로 잘라서 각 토큰(인자)을 argv 배열에
 // 저장하고, 인자의 개수를 반환하는 함수 예: target = "echo hello world" → argv
 // = ["echo", "hello", "world", NULL]
-static int parse_args(char *target, char *argv[]) {
+static int parse_args(char* target, char* argv[]) {
   int argc = 0;  // 인자의 개수를 세기 위한 변수
-  char *token;
-  char *save_ptr;  // strtok_r에서 파싱 상태를 유지하기 위한 포인터
+  char* token;
+  char* save_ptr;  // strtok_r에서 파싱 상태를 유지하기 위한 포인터
                    // (reentrant-safe)
 
   // 첫 번째 토큰 추출. strtok_r는 문자열을 공백을 기준으로 분리
@@ -114,15 +114,15 @@ static int parse_args(char *target, char *argv[]) {
 }
 
 // 사용자 프로그램의 스택을 구성하여 인자들을 전달하는 함수
-static void argument_stack(char *argv[], int argc, struct intr_frame *_if) {
+static void argument_stack(char* argv[], int argc, struct intr_frame* _if) {
   uint64_t rsp_arr[argc];  // 각 인자 문자열의 시작 주소를 저장할 배열
 
   // 문자열을 스택에 역순으로 복사
   for (int i = argc - 1; i >= 0; i--) {
-    size_t len = strlen(argv[i]) + 1;        // 문자열 길이 + 널 문자 포함
-    _if->rsp -= len;                         // 스택 아래로 공간 확보
-    rsp_arr[i] = _if->rsp;                   // 해당 문자열이 위치한 주소 저장
-    memcpy((void *)_if->rsp, argv[i], len);  // 스택에 문자열 복사
+    size_t len = strlen(argv[i]) + 1;       // 문자열 길이 + 널 문자 포함
+    _if->rsp -= len;                        // 스택 아래로 공간 확보
+    rsp_arr[i] = _if->rsp;                  // 해당 문자열이 위치한 주소 저장
+    memcpy((void*)_if->rsp, argv[i], len);  // 스택에 문자열 복사
   }
 
   // 16바이트 정렬 맞추기 (rsp를 16의 배수로 내림 정렬)
@@ -134,25 +134,25 @@ static void argument_stack(char *argv[], int argc, struct intr_frame *_if) {
   // 되도록 한다.
   if ((argc % 2) == 0) {
     _if->rsp -= 8;
-    memset((void *)_if->rsp, 0, 8);
+    memset((void*)_if->rsp, 0, 8);
   }
 
   // NULL sentinel push (argv[argc] = NULL)
-  _if->rsp -= 8;                                // 포인터 크기만큼 스택 아래로
-  memset((void *)_if->rsp, 0, sizeof(char *));  // 0으로 채움 (NULL)
+  _if->rsp -= 8;                              // 포인터 크기만큼 스택 아래로
+  memset((void*)_if->rsp, 0, sizeof(char*));  // 0으로 채움 (NULL)
 
   // argv[i] 포인터들을 역순으로 push
   for (int i = argc - 1; i >= 0; i--) {
     _if->rsp -= 8;  // 8바이트 공간 확보
-    memcpy((void *)_if->rsp, &rsp_arr[i],
-           sizeof(char *));  // 각 문자열의 주소를 복사
+    memcpy((void*)_if->rsp, &rsp_arr[i],
+           sizeof(char*));  // 각 문자열의 주소를 복사
   }
 
   // 가짜 주소 fake return address (unused, just for conventional layout)
   // 실제로 쓰이지 않는 가짜 리턴 주소인데, 스택 프레임의 모양을 함수 호출
   // 규약에 맞게 유지하려고 형식적으로만 넣은 값
   _if->rsp -= 8;
-  memset((void *)_if->rsp, 0, sizeof(void *));  // 가짜 리턴 주소 = 0
+  memset((void*)_if->rsp, 0, sizeof(void*));  // 가짜 리턴 주소 = 0
 
   // 사용자 프로그램 시작 시 인자 전달을 위한 레지스터 설정
   _if->R.rdi = argc;  // 첫 번째 인자: argc
@@ -161,9 +161,9 @@ static void argument_stack(char *argv[], int argc, struct intr_frame *_if) {
       8;  // 두 번째 인자: argv (가짜 리턴 주소 다음부터가 argv[0] 배열)
 }
 
-int process_add_file(struct file *file) {
+int process_add_file(struct file* file) {
   // 현재 실행 중인 스레드(=프로세스) 가져오기
-  struct thread *current_thread = thread_current();
+  struct thread* current_thread = thread_current();
 
   // 파일 디스크립터(fd)는 0~2는 이미 예약된 상태(stdin, stdout, stderr)
   // 따라서 일반 파일은 3번부터 사용
@@ -185,8 +185,8 @@ int process_add_file(struct file *file) {
   return -1;
 }
 
-struct file *process_get_file(int fd) {
-  struct thread *current_thread =
+struct file* process_get_file(int fd) {
+  struct thread* current_thread =
       thread_current();  // 현재 실행 중인 스레드 포인터 획득
   if (current_thread->FDT == NULL) {
     return NULL;  // FDT가 아직 준비되지 않았다면 접근할 수 있는 파일이 없음
@@ -203,8 +203,8 @@ struct file *process_get_file(int fd) {
  * 스케줄될 수도 있고(심지어 종료될 수도 있다).
  * initd의 스레드 ID를 반환하며, 스레드를 생성할 수 없는 경우 TID_ERROR를
  * 반환한다. 참고: 이 함수는 반드시 한 번만 호출되어야 한다. */
-tid_t process_create_initd(const char *file_name) {
-  char *fn_copy;
+tid_t process_create_initd(const char* file_name) {
+  char* fn_copy;
   tid_t tid;
 
   /* Initialize minimal wait synchronization for initd.
@@ -223,8 +223,8 @@ tid_t process_create_initd(const char *file_name) {
   /* FILE_NAME을 실행할 새로운 스레드를 생성한다. */
   char thread_name[16];  // thread 구조체 내부 name 크기가 char name[16]임
   strlcpy(thread_name, file_name, sizeof thread_name);
-  char *save_ptr;
-  char *token = strtok_r(thread_name, " ", &save_ptr);  // file_name만큼만 wkfma
+  char* save_ptr;
+  char* token = strtok_r(thread_name, " ", &save_ptr);  // file_name만큼만 wkfma
 
   if (token == NULL) {
     token = thread_name;
@@ -239,7 +239,7 @@ tid_t process_create_initd(const char *file_name) {
 }
 
 /* 첫 번째 사용자 프로세스를 실행하는 스레드 함수 */
-static void initd(void *f_name) {
+static void initd(void* f_name) {
 #ifdef VM
   supplemental_page_table_init(&thread_current()->spt);
 #endif
@@ -254,8 +254,8 @@ static void initd(void *f_name) {
 /* 현재 프로세스를 `name`이라는 이름으로 복제한다.
  * 새 프로세스의 스레드 ID를 반환하며,
  * 스레드를 생성할 수 없으면 TID_ERROR를 반환한다. */
-tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED) {
-  struct thread *parent = thread_current();
+tid_t process_fork(const char* name, struct intr_frame* if_ UNUSED) {
+  struct thread* parent = thread_current();
 
   // 부모 스레드가 trap에서 복귀할 때 사용할 레지스터 상태를 백업
   memcpy(&parent->intr_frame, if_, sizeof(struct intr_frame));
@@ -267,7 +267,7 @@ tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED) {
   }
 
   // 방금 만든 자식을 부모의 children 리스트에서 찾아옴
-  struct thread *child = get_child_thread(fork_tid);
+  struct thread* child = get_child_thread(fork_tid);
   if (child == NULL) {
     return TID_ERROR;  // 리스트에서 찾지 못하면 실패로 간주 -1 return
   }
@@ -289,11 +289,11 @@ tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED) {
 #ifndef VM
 /* Project 2에서 부모의 주소 공간을 복제할 때 pml4_for_each에 전달하는 헬퍼 함수
  */
-static bool duplicate_pte(uint64_t *pte, void *va, void *aux) {
-  struct thread *current = thread_current();
-  struct thread *parent = (struct thread *)aux;
-  void *parent_page;
-  void *newpage;
+static bool duplicate_pte(uint64_t* pte, void* va, void* aux) {
+  struct thread* current = thread_current();
+  struct thread* parent = (struct thread*)aux;
+  void* parent_page;
+  void* newpage;
   bool writable;
 
   /* 1) 커널 주소라면 굳이 복제할 필요가 없으므로 바로 성공 처리한다. */
@@ -328,24 +328,24 @@ static bool duplicate_pte(uint64_t *pte, void *va, void *aux) {
  * 힌트) parent->tf 는 프로세스의 사용자 영역 컨텍스트(userland context)를
  *       가지고 있지 않다.
  *       즉, process_fork 의 두 번째 인자를 이 함수에 전달해야 한다. */
-static void __do_fork(void *aux) {
+static void __do_fork(void* aux) {
   struct intr_frame if_;
-  struct thread *parent = (struct thread *)aux;
-  struct thread *current = thread_current();
+  struct thread* parent = (struct thread*)aux;
+  struct thread* current = thread_current();
 #ifdef VM
   supplemental_page_table_init(&current->spt);
 #endif
 
   /* TODO: parent_if를 어떻게든 전달해야 한다. (즉, process_fork()의 if_ 인자를
    * 의미한다) */
-  struct intr_frame *parent_if = &parent->intr_frame;
+  struct intr_frame* parent_if = &parent->intr_frame;
   bool succ = true;
 
   /* 새 스레드가 사용할 FDT, FD 인덱스 등 기본 자료구조를 초기화한다. */
   process_init();
-  struct file *stdin_file = syscall_get_std_file(
+  struct file* stdin_file = syscall_get_std_file(
       STDIN_FILENO);  // 부모와 동일한 STDIN 더미 포인터 캐싱
-  struct file *stdout_file = syscall_get_std_file(
+  struct file* stdout_file = syscall_get_std_file(
       STDOUT_FILENO);  // 부모와 동일한 STDOUT 더미 포인터 캐싱
   for (int fd = 0; fd < MAX_FD; fd++) {
     current->FDT[fd] =
@@ -400,7 +400,7 @@ static void __do_fork(void *aux) {
   }
   /* 부모가 열어 둔 모든 파일 디스크립터를 순회하며 자식 FDT에 채운다. */
   for (int fd = 0; fd < MAX_FD; fd++) {
-    struct file *parent_file = parent->FDT[fd];
+    struct file* parent_file = parent->FDT[fd];
     if (parent_file == NULL) {
       continue;  // 부모가 사용하지 않은 슬롯은 넘긴다
     }
@@ -444,9 +444,9 @@ done:
 
 /* 현재 실행 컨텍스트를 f_name으로 전환한다.
  * 실패하면 -1을 반환한다. */
-int process_exec(void *f_name) {
+int process_exec(void* f_name) {
   // 최대 MAX_ARGS 개수 만큼의 인자들을 저장할 배열 선언
-  char *argv[MAX_ARGS];
+  char* argv[MAX_ARGS];
   // f_name은 "실행파일명과 인자1 인자2 ..." 형태의 문자열임
   // 이를 공백 기준으로 파싱하여 argv에 저장하고 argc에 개수를 저장
   int argc = parse_args(f_name, argv);
@@ -471,7 +471,7 @@ int process_exec(void *f_name) {
    * 모두 끝난 뒤에도 실행 파일 쓰기가 계속 막힘 현재는 exec()가 이전 실행
    * 파일의 deny-write 상태를 해제하고 새 프로그램을 로드하기 때문에 참조
    * 카운트가 0으로 돌아가고 부모의 마지막 write()도 성공함*/
-  struct thread *current_thread = thread_current();
+  struct thread* current_thread = thread_current();
   if (current_thread->running_file != NULL) {
     /* 이전 실행 파일의 deny-write를 해제하고 핸들을 닫는다. */
     file_close(current_thread->running_file);
@@ -518,7 +518,7 @@ int process_wait(tid_t child_tid) {
   enum intr_level old_level = intr_disable();
 
   // 현재 스레드(부모)의 자식 리스트에서 주어진 TID를 가진 자식을 탐색
-  struct thread *child_thread = get_child_thread(child_tid);
+  struct thread* child_thread = get_child_thread(child_tid);
   intr_set_level(old_level);  // 인터럽트 다시 활성화
 
   // 만약 해당 자식이 존재하지 않는다면 잘못된 접근이므로 -1 반환
@@ -544,7 +544,7 @@ int process_wait(tid_t child_tid) {
 /* Exit the process. This function is called by thread_exit (). */
 void process_exit(void) {
   // 현재 종료 중인 프로세스(thread)를 가져옴
-  struct thread *current_thread = thread_current();
+  struct thread* current_thread = thread_current();
 
   // 파일 디스크럽터 테이블(FDT)이 존재한다면 열린 파일을 모두 닫는다.
   if (current_thread->FDT != NULL) {
@@ -574,13 +574,13 @@ void process_exit(void) {
 
 /* Free the current process's resources. */
 static void process_cleanup(void) {
-  struct thread *curr = thread_current();
+  struct thread* curr = thread_current();
 
 #ifdef VM
   supplemental_page_table_kill(&curr->spt);
 #endif
 
-  uint64_t *pml4;
+  uint64_t* pml4;
   /* Destroy the current process's page directory and switch back
    * to the kernel-only page directory. */
   pml4 = curr->pml4;
@@ -600,7 +600,7 @@ static void process_cleanup(void) {
 
 /* 다음 스레드가 사용자 코드를 실행할 수 있도록 CPU 상태를 설정한다.
  * 모든 컨텍스트 스위치마다 호출된다. */
-void process_activate(struct thread *next) {
+void process_activate(struct thread* next) {
   /* 스레드의 페이지 테이블을 활성화한다. */
   pml4_activate(next->pml4);
 
@@ -661,9 +661,9 @@ struct ELF64_PHDR {
 #define ELF ELF64_hdr
 #define Phdr ELF64_PHDR
 
-static bool setup_stack(struct intr_frame *if_);
-static bool validate_segment(const struct Phdr *, struct file *);
-static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
+static bool setup_stack(struct intr_frame* if_);
+static bool validate_segment(const struct Phdr*, struct file*);
+static bool load_segment(struct file* file, off_t ofs, uint8_t* upage,
                          uint32_t read_bytes, uint32_t zero_bytes,
                          bool writable);
 
@@ -675,10 +675,10 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
  * RIP (Instruction Pointer): CPU가 다음에 실행할 명령어 주소
  * RSP (Stack Pointer): 현재 스택의 최상단을 가리키는 포인터
  */
-static bool load(const char *file_name, struct intr_frame *if_) {
-  struct thread *t = thread_current();
+static bool load(const char* file_name, struct intr_frame* if_) {
+  struct thread* t = thread_current();
   struct ELF ehdr;
-  struct file *file = NULL;
+  struct file* file = NULL;
   off_t file_ofs;
   bool success = false;
   int i;
@@ -749,7 +749,7 @@ static bool load(const char *file_name, struct intr_frame *if_) {
             read_bytes = 0;
             zero_bytes = ROUND_UP(page_offset + phdr.p_memsz, PGSIZE);
           }
-          if (!load_segment(file, file_page, (void *)mem_page, read_bytes,
+          if (!load_segment(file, file_page, (void*)mem_page, read_bytes,
                             zero_bytes, writable))
             goto done;
         } else
@@ -777,7 +777,7 @@ done:
 
 /* Checks whether PHDR describes a valid, loadable segment in
  * FILE and returns true if so, false otherwise. */
-static bool validate_segment(const struct Phdr *phdr, struct file *file) {
+static bool validate_segment(const struct Phdr* phdr, struct file* file) {
   /* p_offset and p_vaddr must have the same page offset. */
   if ((phdr->p_offset & PGMASK) != (phdr->p_vaddr & PGMASK)) return false;
 
@@ -792,8 +792,8 @@ static bool validate_segment(const struct Phdr *phdr, struct file *file) {
 
   /* The virtual memory region must both start and end within the
      user address space range. */
-  if (!is_user_vaddr((void *)phdr->p_vaddr)) return false;
-  if (!is_user_vaddr((void *)(phdr->p_vaddr + phdr->p_memsz))) return false;
+  if (!is_user_vaddr((void*)phdr->p_vaddr)) return false;
+  if (!is_user_vaddr((void*)(phdr->p_vaddr + phdr->p_memsz))) return false;
 
   /* The region cannot "wrap around" across the kernel virtual
      address space. */
@@ -816,7 +816,7 @@ static bool validate_segment(const struct Phdr *phdr, struct file *file) {
  * outside of #ifndef macro. */
 
 /* load() helpers. */
-static bool install_page(void *upage, void *kpage, bool writable);
+static bool install_page(void* upage, void* kpage, bool writable);
 
 /* Loads a segment starting at offset OFS in FILE at address
  * UPAGE.  In total, READ_BYTES + ZERO_BYTES bytes of virtual
@@ -832,7 +832,7 @@ static bool install_page(void *upage, void *kpage, bool writable);
  *
  * Return true if successful, false if a memory allocation error
  * or disk read error occurs. */
-static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
+static bool load_segment(struct file* file, off_t ofs, uint8_t* upage,
                          uint32_t read_bytes, uint32_t zero_bytes,
                          bool writable) {
   ASSERT((read_bytes + zero_bytes) % PGSIZE == 0);
@@ -848,7 +848,7 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
     size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
     /* Get a page of memory. */
-    uint8_t *kpage = palloc_get_page(PAL_USER);
+    uint8_t* kpage = palloc_get_page(PAL_USER);
     if (kpage == NULL) return false;
 
     /* Load this page. */
@@ -876,13 +876,13 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
 /* USER_STACK 주소에 0으로 초기화된(page가 모두 0인) 메모리 페이지를 매핑해서
    가장 기본적인 스택 공간을 마련해준다. Create a minimal stack by mapping a
    zeroed page at the USER_STACK */
-static bool setup_stack(struct intr_frame *if_) {
-  uint8_t *kpage;
+static bool setup_stack(struct intr_frame* if_) {
+  uint8_t* kpage;
   bool success = false;
 
   kpage = palloc_get_page(PAL_USER | PAL_ZERO);
   if (kpage != NULL) {
-    success = install_page(((uint8_t *)USER_STACK) - PGSIZE, kpage, true);
+    success = install_page(((uint8_t*)USER_STACK) - PGSIZE, kpage, true);
     if (success)
       if_->rsp = USER_STACK;
     else
@@ -894,10 +894,10 @@ static bool setup_stack(struct intr_frame *if_) {
 // 문자열 target을 공백(" ") 기준으로 잘라서 각 토큰(인자)을 argv 배열에
 // 저장하고, 인자의 개수를 반환하는 함수 예: target = "echo hello world" → argv
 // = ["echo", "hello", "world", NULL]
-static int parse_args(char *target, char *argv[]) {
+static int parse_args(char* target, char* argv[]) {
   int argc = 0;  // 인자의 개수를 세기 위한 변수
-  char *token;
-  char *save_ptr;  // strtok_r에서 파싱 상태를 유지하기 위한 포인터
+  char* token;
+  char* save_ptr;  // strtok_r에서 파싱 상태를 유지하기 위한 포인터
                    // (reentrant-safe)
 
   // 첫 번째 토큰 추출. strtok_r는 문자열을 공백을 기준으로 분리
@@ -917,15 +917,15 @@ static int parse_args(char *target, char *argv[]) {
 }
 
 // 사용자 프로그램의 스택을 구성하여 인자들을 전달하는 함수
-static void argument_stack(char *argv[], int argc, struct intr_frame *_if) {
+static void argument_stack(char* argv[], int argc, struct intr_frame* _if) {
   uint64_t rsp_arr[argc];  // 각 인자 문자열의 시작 주소를 저장할 배열
 
   // 문자열을 스택에 역순으로 복사
   for (int i = argc - 1; i >= 0; i--) {
-    size_t len = strlen(argv[i]) + 1;        // 문자열 길이 + 널 문자 포함
-    _if->rsp -= len;                         // 스택 아래로 공간 확보
-    rsp_arr[i] = _if->rsp;                   // 해당 문자열이 위치한 주소 저장
-    memcpy((void *)_if->rsp, argv[i], len);  // 스택에 문자열 복사
+    size_t len = strlen(argv[i]) + 1;       // 문자열 길이 + 널 문자 포함
+    _if->rsp -= len;                        // 스택 아래로 공간 확보
+    rsp_arr[i] = _if->rsp;                  // 해당 문자열이 위치한 주소 저장
+    memcpy((void*)_if->rsp, argv[i], len);  // 스택에 문자열 복사
   }
 
   // 16바이트 정렬 맞추기 (rsp를 16의 배수로 내림 정렬)
@@ -937,25 +937,25 @@ static void argument_stack(char *argv[], int argc, struct intr_frame *_if) {
   // 되도록 한다.
   if ((argc % 2) == 0) {
     _if->rsp -= 8;
-    memset((void *)_if->rsp, 0, 8);
+    memset((void*)_if->rsp, 0, 8);
   }
 
   // NULL sentinel push (argv[argc] = NULL)
-  _if->rsp -= 8;                                // 포인터 크기만큼 스택 아래로
-  memset((void *)_if->rsp, 0, sizeof(char *));  // 0으로 채움 (NULL)
+  _if->rsp -= 8;                              // 포인터 크기만큼 스택 아래로
+  memset((void*)_if->rsp, 0, sizeof(char*));  // 0으로 채움 (NULL)
 
   // argv[i] 포인터들을 역순으로 push
   for (int i = argc - 1; i >= 0; i--) {
     _if->rsp -= 8;  // 8바이트 공간 확보
-    memcpy((void *)_if->rsp, &rsp_arr[i],
-           sizeof(char *));  // 각 문자열의 주소를 복사
+    memcpy((void*)_if->rsp, &rsp_arr[i],
+           sizeof(char*));  // 각 문자열의 주소를 복사
   }
 
   // 가짜 주소 fake return address (unused, just for conventional layout)
   // 실제로 쓰이지 않는 가짜 리턴 주소인데, 스택 프레임의 모양을 함수 호출
   // 규약에 맞게 유지하려고 형식적으로만 넣은 값
   _if->rsp -= 8;
-  memset((void *)_if->rsp, 0, sizeof(void *));  // 가짜 리턴 주소 = 0
+  memset((void*)_if->rsp, 0, sizeof(void*));  // 가짜 리턴 주소 = 0
 
   // 사용자 프로그램 시작 시 인자 전달을 위한 레지스터 설정
   _if->R.rdi = argc;  // 첫 번째 인자: argc
@@ -964,16 +964,16 @@ static void argument_stack(char *argv[], int argc, struct intr_frame *_if) {
       8;  // 두 번째 인자: argv (가짜 리턴 주소 다음부터가 argv[0] 배열)
 }
 
-struct thread *get_child_thread(tid_t child_tid) {
-  struct thread *current_thread =
+struct thread* get_child_thread(tid_t child_tid) {
+  struct thread* current_thread =
       thread_current();          // 현재 실행 중인 스레드(=부모 스레드)를 가져옴
-  struct thread *result = NULL;  // 결과를 저장할 포인터
+  struct thread* result = NULL;  // 결과를 저장할 포인터
 
   // 현재 스레드의 자식 리스트를 순회함
-  for (struct list_elem *i = list_begin(&current_thread->children);
+  for (struct list_elem* i = list_begin(&current_thread->children);
        i != list_end(&current_thread->children); i = i->next) {
     // 리스트 요소 i를 thread 구조체로 변환
-    struct thread *t = list_entry(i, struct thread, child_elem);
+    struct thread* t = list_entry(i, struct thread, child_elem);
 
     // 자식 스레드의 tid가 찾고자 하는 child_tid와 같다면
     if (t->tid == child_tid) {
@@ -985,9 +985,9 @@ struct thread *get_child_thread(tid_t child_tid) {
   return result;  // 찾았으면 해당 스레드 포인터 반환, 못 찾았으면 NULL 반환
 }
 
-int process_add_file(struct file *file) {
+int process_add_file(struct file* file) {
   // 현재 실행 중인 스레드(=프로세스) 가져오기
-  struct thread *current_thread = thread_current();
+  struct thread* current_thread = thread_current();
 
   // 파일 디스크립터(fd)는 0~2는 이미 예약된 상태(stdin, stdout, stderr)
   // 따라서 일반 파일은 3번부터 사용
@@ -1009,8 +1009,8 @@ int process_add_file(struct file *file) {
   return -1;
 }
 
-struct file *process_get_file(int fd) {
-  struct thread *current_thread =
+struct file* process_get_file(int fd) {
+  struct thread* current_thread =
       thread_current();  // 현재 실행 중인 스레드 포인터 획득
   if (current_thread->FDT == NULL) {
     return NULL;  // FDT가 아직 준비되지 않았다면 접근할 수 있는 파일이 없음
@@ -1031,8 +1031,8 @@ struct file *process_get_file(int fd) {
  * with palloc_get_page().
  * Returns true on success, false if UPAGE is already mapped or
  * if memory allocation fails. */
-static bool install_page(void *upage, void *kpage, bool writable) {
-  struct thread *t = thread_current();
+static bool install_page(void* upage, void* kpage, bool writable) {
+  struct thread* t = thread_current();
 
   /* Verify that there's not already a page at that virtual
    * address, then map our page there. */
@@ -1044,9 +1044,14 @@ static bool install_page(void *upage, void *kpage, bool writable) {
  * If you want to implement the function for only project 2, implement it on the
  * upper block. */
 
-static bool lazy_load_segment(struct page *page, void *aux) {
-  struct lazy_load_aux *llaux = (struct lazy_load_aux *)aux;
-  void *kva = page->frame->kva;
+bool lazy_load_segment(struct page* page, void* aux) {
+  struct lazy_load_aux* llaux = (struct lazy_load_aux*)aux;
+  // 만약 읽은 적이 있다면 재오픈
+  // if (page->file.is_loaded_file) {
+  //   llaux->file = file_reopen(llaux->file);
+  // }
+
+  void* kva = page->frame->kva;
   off_t read_bytes = file_read_at(
       llaux->file, kva, (off_t)llaux->page_read_bytes, (off_t)llaux->ofs);
 
@@ -1054,7 +1059,9 @@ static bool lazy_load_segment(struct page *page, void *aux) {
     free(aux);
     return false;
   }
+
   page->writable = llaux->is_writable;
+  // page->file.is_loaded_file = true;
   memset(kva + read_bytes, 0, llaux->page_zero_bytes);
   free(aux);
   return true;
@@ -1075,7 +1082,7 @@ static bool lazy_load_segment(struct page *page, void *aux) {
  * Return true if successful, false if a memory allocation error
  * or disk read error occurs. */
 
-static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
+static bool load_segment(struct file* file, off_t ofs, uint8_t* upage,
                          uint32_t read_bytes, uint32_t zero_bytes,
                          bool writable) {
   /* 읽어야 할 바이트가 페이지 단위여야 함 */
@@ -1093,7 +1100,7 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
     size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
     /* TODO: Set up aux to pass information to the lazy_load_segment. */
-    struct lazy_load_aux *aux = malloc(sizeof(struct lazy_load_aux));
+    struct lazy_load_aux* aux = malloc(sizeof(struct lazy_load_aux));
     aux->file = file;
     aux->page_read_bytes = page_read_bytes;
     aux->page_zero_bytes = page_zero_bytes;
@@ -1118,12 +1125,12 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
  * TODO: If success, set the rsp accordingly.
  * TODO: You should mark the page is stack. */
 /* TODO: Your code goes here */
-static bool setup_stack(struct intr_frame *if_) {
+static bool setup_stack(struct intr_frame* if_) {
   bool success = false;
-  void *stack_bottom = (void *)(((uint8_t *)USER_STACK) - PGSIZE);
+  void* stack_bottom = (void*)(((uint8_t*)USER_STACK) - PGSIZE);
 
-  struct thread *cur = thread_current();
-  struct page *p = NULL;
+  struct thread* cur = thread_current();
+  struct page* p = NULL;
 
   // Marking : VM_MARKER로 스택 페이지인거 마킹
   // 로드 예약 함수 실행

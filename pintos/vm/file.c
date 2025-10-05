@@ -29,9 +29,18 @@ bool file_backed_initializer(struct page *page, enum vm_type type, void *kva) {
   //   size_t page_zero_bytes;
   // };
   struct file_page *file_page = &page->file;
+  struct lazy_load_aux *aux = page->uninit.aux;
+
+  file_page->file = aux->file;
+  file_page->ofs = aux->ofs;
+  file_page->page_read_bytes = aux->page_read_bytes;
+  file_page->page_zero_bytes = aux->page_zero_bytes;
+  file_page->is_writable = aux->is_writable;
+  file_page->is_loaded_file = true;
 
   // struct lazy_load_aux *aux = (struct lazy_load_aux *)page->file.aux;
   // struct lazy_load_aux *aux = page->uninit.aux =
+  return true;
 }
 
 /* Swap in the page by read contents from the file. */
