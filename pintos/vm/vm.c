@@ -282,6 +282,7 @@ bool vm_claim_page(void* va) {
  */
 static bool vm_do_claim_page(struct page* page) {
   struct frame* frame = vm_get_frame();
+  if (frame == NULL) return false;
 
   frame->page = page;
   page->frame = frame;
@@ -316,6 +317,16 @@ static struct lazy_load_aux* copy_aux(const struct lazy_load_aux* src) {
 
 static bool copy_uninit_page(struct supplemental_page_table* dst,
                              struct page* src) {
+  if (VM_TYPE(src->uninit.type) == VM_ANON) {
+    if (!vm_alloc_page_with_initializer(src->uninit.type, src->va, src->writable, src->uninit.init, NULL)) {
+      return false;
+    }
+    return true;
+  }
+
+  // 파일 기반일 경우
+  if (src->uninit.aux == NULL) return false;
+
   struct lazy_load_aux* copied_aux = copy_aux(src->uninit.aux);
   if (copied_aux == NULL) return false;
 
@@ -358,7 +369,6 @@ static bool copy_loaded_page(struct supplemental_page_table* dst,
 
   kva = dst_page->frame->kva;
   memcpy(kva, src->frame->kva, PGSIZE);
-
   return true;
 }
 
