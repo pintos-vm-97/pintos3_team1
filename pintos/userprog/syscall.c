@@ -243,10 +243,7 @@ unsigned syscall_tell(int fd) {
   }
 
   // 현재 파일의 읽기/쓰기 위치(offset)를 반환
-  lock_acquire(&filesys_lock);
-  off_t position = file_tell(file);
-  lock_release(&filesys_lock);
-  return (unsigned) position;
+  return (unsigned) file_tell(file);
 }
 
 void syscall_seek(int fd, unsigned position) {
@@ -259,9 +256,7 @@ void syscall_seek(int fd, unsigned position) {
   }
 
   // 파일의 읽기/쓰기 위치를 지정된 위치로 변경
-  lock_acquire(&filesys_lock);
   file_seek(file, position);
-  lock_release(&filesys_lock);
 }
 
 void syscall_close(int fd) {
@@ -384,21 +379,7 @@ int syscall_read(int fd, void *buffer, unsigned size) {
     return -1;
   }
 
-  // uint8_t *kbuf = malloc(size);
-  // if (kbuf == NULL) {
-  //   return -1;
-  // }
-
-  lock_acquire(&filesys_lock);
-  int bytes_read = file_read(file, buffer, size);
-  lock_release(&filesys_lock);
-
-  // if (bytes_read > 0) {
-  //   memcpy(buffer, kbuf, (size_t)bytes_read);
-  // }
-  //free(kbuf);
-
-  return bytes_read;
+  return (int) file_read(file, buffer, size);
 }
 
 int syscall_filesize(int fd) {
@@ -411,10 +392,7 @@ int syscall_filesize(int fd) {
   }
 
   // 해당 파일의 크기(바이트 단위)를 반환
-  lock_acquire(&filesys_lock);
-  off_t length = file_length(file);
-  lock_release(&filesys_lock);
-  return (int) length;
+  return (int) file_length(file);
 }
 
 /* 파일을 오픈하는 시스템콜 핸들러 */

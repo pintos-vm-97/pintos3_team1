@@ -20,7 +20,7 @@ fork-boundary PASS
 create-bound PASS
 rox-multichild PASS
 page-merge-seq PASS
-pt-bad-read FAIL
+pt-bad-read PASS
 rox-child PASS
 page-merge-par PASS
 pt-bad-addr PASS
