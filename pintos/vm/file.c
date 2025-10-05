@@ -22,12 +22,6 @@ void vm_file_init(void) {}
 bool file_backed_initializer(struct page *page, enum vm_type type, void *kva) {
   /* Set up the handler */
   page->operations = &file_ops;
-  // struct lazy_load_aux {
-  //   struct file *file;
-  //   off_t ofs;
-  //   size_t page_read_bytes;
-  //   size_t page_zero_bytes;
-  // };
   struct file_page *file_page = &page->file;
   struct lazy_load_aux *aux = page->uninit.aux;
 
@@ -36,10 +30,6 @@ bool file_backed_initializer(struct page *page, enum vm_type type, void *kva) {
   file_page->page_read_bytes = aux->page_read_bytes;
   file_page->page_zero_bytes = aux->page_zero_bytes;
   file_page->is_writable = aux->is_writable;
-  file_page->is_loaded_file = true;
-
-  // struct lazy_load_aux *aux = (struct lazy_load_aux *)page->file.aux;
-  // struct lazy_load_aux *aux = page->uninit.aux =
   return true;
 }
 

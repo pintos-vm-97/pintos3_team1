@@ -3,6 +3,7 @@
 #include <debug.h>
 #include <stdio.h>
 #include <syscall-nr.h>
+#include <string.h>
 
 #include "devices/input.h"
 #include "filesys/directory.h"  // 디렉터리 관련 자료구조 및 함수 (디렉터리 열기, 탐색 등)
@@ -242,7 +243,10 @@ unsigned syscall_tell(int fd) {
   }
 
   // 현재 파일의 읽기/쓰기 위치(offset)를 반환
-  return file_tell(file);
+  lock_acquire(&filesys_lock);
+  off_t position = file_tell(file);
+  lock_release(&filesys_lock);
+  return (unsigned) position;
 }
 
 void syscall_seek(int fd, unsigned position) {
@@ -255,7 +259,9 @@ void syscall_seek(int fd, unsigned position) {
   }
 
   // 파일의 읽기/쓰기 위치를 지정된 위치로 변경
+  lock_acquire(&filesys_lock);
   file_seek(file, position);
+  lock_release(&filesys_lock);
 }
 
 void syscall_close(int fd) {
@@ -383,9 +389,9 @@ int syscall_read(int fd, void *buffer, unsigned size) {
   //   return -1;
   // }
 
-  //lock_acquire(&filesys_lock);
+  lock_acquire(&filesys_lock);
   int bytes_read = file_read(file, buffer, size);
-  //lock_release(&filesys_lock);
+  lock_release(&filesys_lock);
 
   // if (bytes_read > 0) {
   //   memcpy(buffer, kbuf, (size_t)bytes_read);
@@ -405,7 +411,10 @@ int syscall_filesize(int fd) {
   }
 
   // 해당 파일의 크기(바이트 단위)를 반환
-  return file_length(file);
+  lock_acquire(&filesys_lock);
+  off_t length = file_length(file);
+  lock_release(&filesys_lock);
+  return (int) length;
 }
 
 /* 파일을 오픈하는 시스템콜 핸들러 */
@@ -517,7 +526,10 @@ bool syscall_create(const char *file, unsigned initial_size) {
   // 사용자 포인터 유효성 검사 (커널 주소/NULL/미매핑 주소 거부)
   usr_address_vali(file);
   // 파일 시스템에 새 파일 생성 (초기 크기 지정), 성공 여부 반환 (boolean)
-  return filesys_create(file, initial_size);
+  lock_acquire(&filesys_lock);
+  bool is_success = filesys_create(file, initial_size);
+  lock_release(&filesys_lock);
+  return is_success;
 }
 
 /* 사용자 주소 유효성 검증 유틸리티 */

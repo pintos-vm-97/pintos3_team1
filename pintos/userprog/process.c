@@ -27,6 +27,8 @@
 #include "vm/vm.h"
 #endif
 
+extern struct lock filesys_lock;
+
 #define MAX_ARGS 128
 
 static void process_cleanup(void);
@@ -681,6 +683,7 @@ static bool load(const char* file_name, struct intr_frame* if_) {
   struct file* file = NULL;
   off_t file_ofs;
   bool success = false;
+  bool lock_held = false;
   int i;
 
   /* Allocate and activate page directory. */
@@ -689,6 +692,8 @@ static bool load(const char* file_name, struct intr_frame* if_) {
   process_activate(thread_current());
 
   /* Open executable file. */
+  lock_acquire(&filesys_lock);
+  lock_held = true;
   file = filesys_open(file_name);
   if (file == NULL) {
     printf("load: %s: open failed\n", file_name);
@@ -739,6 +744,7 @@ static bool load(const char* file_name, struct intr_frame* if_) {
           uint32_t read_bytes, zero_bytes;
           if (phdr.p_filesz > 0) {
             /* Normal segment.
+            
              * Read initial part from disk and zero the rest. */
             read_bytes = page_offset + phdr.p_filesz;
             zero_bytes =
@@ -758,6 +764,9 @@ static bool load(const char* file_name, struct intr_frame* if_) {
     }
   }
 
+  lock_release(&filesys_lock);
+  lock_held = false;
+
   /* Set up stack. */
   if (!setup_stack(if_)) goto done;
 
@@ -770,6 +779,7 @@ static bool load(const char* file_name, struct intr_frame* if_) {
   success = true;
 
 done:
+  if (lock_held) lock_release(&filesys_lock);
   /* We arrive here whether the load is successful or not. */
   // file_close (file);
   return success;
