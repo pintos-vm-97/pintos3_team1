@@ -316,24 +316,17 @@ static struct lazy_load_aux* copy_aux(const struct lazy_load_aux* src) {
 
 static bool copy_uninit_page(struct supplemental_page_table* dst,
                              struct page* src) {
-  void* va = src->va;
-  struct page* dst_page = NULL;
-  void* kva = NULL;
-  struct lazy_load_aux* copied_aux = copy_aux(src);
+  struct lazy_load_aux* copied_aux = copy_aux(src->uninit.aux);
   if (copied_aux == NULL) return false;
 
-  if (!vm_alloc_page_with_initializer(VM_UNINIT, va, src->writable,
-                                     lazy_load_segment, copied_aux)) {
-    goto err;
+  if (!vm_alloc_page_with_initializer(src->uninit.type, src->va, src->writable,
+                                      src->uninit.init, copied_aux)) {
+    file_close(copied_aux->file);
+    free(copied_aux);
+    return false;
   }
-  if (!vm_claim_page(va)) goto err;
-  if (spt_find_page(dst, va) == NULL) goto err;
 
   return true;
-
-err:
-  free(copied_aux);
-  return false;
 }
 
 /**
@@ -342,10 +335,9 @@ err:
  * reopen해야해서 이상함 그래서 어차피 올라온 memory는 memcpy쓰고 file포인터
  * 가진 부분만 교체하면 되니까 이런 방식 사용
  */
-
 static bool copy_loaded_page(struct supplemental_page_table* dst,
                              struct page* src) {
-  enum vm_type type = page_get_type(src);
+  enum vm_type type = VM_TYPE(src->operations->type);
   void* va = src->va;
   struct page* dst_page = NULL;
   void* kva = NULL;
@@ -354,26 +346,26 @@ static bool copy_loaded_page(struct supplemental_page_table* dst,
     return false;
   }
 
-  if (!vm_claim_page(va)) {
-    return false;
-  }
+  if (!vm_claim_page(va)) return false;
+
+  dst_page = spt_find_page(dst, src->va);
+  if (dst_page == NULL) return false;
 
   // 파일 페이지일 경우
   if (VM_TYPE(type) == VM_FILE) {
-    dst_page = spt_find_page(dst, src->va);
-    if (dst_page == NULL) return false;
-
     dst_page->file.file = file_reopen(src->file.file);
-    kva = dst_page->frame->kva;
-    memcpy(kva, src->frame->kva, PGSIZE);
   }
+
+  kva = dst_page->frame->kva;
+  memcpy(kva, src->frame->kva, PGSIZE);
 
   return true;
 }
 
 static bool copy_page(struct supplemental_page_table* dst, struct page* src) {
   bool copy_succ = false;
-  switch (page_get_type(src)) {
+  enum vm_type type = VM_TYPE(src->operations->type);
+  switch (type) {
     case VM_UNINIT:
       copy_succ = copy_uninit_page(dst, src);
       break;
