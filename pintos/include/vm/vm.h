@@ -52,8 +52,9 @@ struct page {
 
   /* 구현해야 할 부분 */
   struct hash_elem hash_elem;  // hash 소속 elem
-  struct list_elem mmap_elem;  // mmap list 소속 elem
+  struct mmap_region *mmap_region;
   bool writable;
+
   /* 타입별 데이터는 union에 묶여 있다.
    * 각 함수는 현재 union 타입을 자동으로 감지한다. */
 
@@ -73,6 +74,14 @@ struct frame {
   void *kva;
   struct page *page;
   struct list_elem elem;
+};
+
+struct mmap_region {
+  struct file *file;
+  void *base_addr;
+  int total_mapped_cnt; // 이 mapped포함 같이 섞인 애들 cnt(리스트 적게 돌려고)
+  void *addr;
+  struct list_elem elem;  // mmap list 소속 elem
 };
 
 /* 페이지 동작을 정의한 함수 테이블.

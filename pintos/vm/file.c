@@ -4,6 +4,7 @@
 #include "userprog/process.h"
 #include "threads/vaddr.h"
 #include "threads/mmu.h"
+#include "threads/malloc.h"
 
 static bool file_backed_swap_in(struct page* page, void* kva);
 static bool file_backed_swap_out(struct page* page);
@@ -57,9 +58,11 @@ static bool file_backed_swap_out(struct page* page) {
 static void file_backed_destroy(struct page* page) {
   // dirty여부 파악하고
   struct file_page* file_page UNUSED = &page->file;
+  free(page->frame);
   if (pml4_is_dirty(thread_current()->pml4, page->va)) {
   }
   // file_close(file_page->file);
+  pml4_clear_page(thread_current()->pml4, page->va);
 }
 
 /* Do the mmap */
@@ -68,12 +71,14 @@ void* do_mmap(void* addr, size_t length, int writable, struct file* file,
               off_t offset) {
   ASSERT(addr != 0 || addr != NULL || length > 0 || pg_ofs(addr) == 0);
 
+  struct lazy_load_aux* aux = NULL;
   off_t f_length = file_length(file);
 
   size_t read_bytes = (f_length > length) ? length : f_length;
-  size_t total_zero_bytes = (f_length - offset > 0) ? f_length - read_bytes : 0;
-
-  void* upage = addr;
+  size_t total_zero_bytes = PGSIZE - (read_bytes % PGSIZE);
+  int need_page_cnt = (read_bytes + PGSIZE - 1) / PGSIZE;
+  void* base_addr = pg_round_down(addr);
+  void* upage = base_addr;
 
   struct file* reopened_file = file_reopen(file);
   if (reopened_file == NULL) return NULL;
@@ -85,7 +90,7 @@ void* do_mmap(void* addr, size_t length, int writable, struct file* file,
     upage = pg_round_down(upage);
 
     /* TODO: Set up aux to pass information to the lazy_load_segment. */
-    struct lazy_load_aux* aux = malloc(sizeof(struct lazy_load_aux));
+    aux = malloc(sizeof(struct lazy_load_aux));
     if (aux == NULL) return NULL;
     aux->file = reopened_file;
     aux->total_file_length = f_length;
@@ -96,10 +101,20 @@ void* do_mmap(void* addr, size_t length, int writable, struct file* file,
     aux->is_reopened = true;
     if (!vm_alloc_page_with_initializer(VM_FILE, upage, writable,
                                         lazy_load_segment, aux)) {
-      free(aux);
-      do_munmap(addr);
-      return false;
+      goto err_cleanup;
     }
+
+    struct page* page = spt_find_page(&thread_current()->spt, upage);
+    if (page == NULL) goto err_cleanup;
+
+    struct mmap_region* region = malloc(sizeof(struct mmap_region));
+    if (region == NULL) goto err_cleanup;
+    page->mmap_region = region;
+    region->file = aux->file;
+    region->base_addr = base_addr;
+    region->total_mapped_cnt = need_page_cnt;
+    region->addr = upage;
+    list_push_back(&thread_current()->mmap_list, &region->elem);
 
     read_bytes -= page_read_bytes;
     total_zero_bytes -= page_zero_bytes;
@@ -107,26 +122,55 @@ void* do_mmap(void* addr, size_t length, int writable, struct file* file,
     upage += PGSIZE;
   }
   return addr;
+
+err_cleanup:
+  free(aux);
+  do_munmap(addr);
+  return NULL;
 }
 
+static void remove_related_regions(void* base_addr) {
+  struct thread* t = thread_current();
+  struct list* mmap_list = &t->mmap_list;
+  struct list_elem* e = list_begin(mmap_list);
+
+  while (e != list_end(mmap_list)) {
+    struct list_elem* next = list_next(e);
+    struct mmap_region* region = list_entry(e, struct mmap_region, elem);
+
+    if (region != NULL && region->base_addr == base_addr) {
+      struct page* page = spt_find_page(&t->spt, pg_round_down(region->addr));
+      if (page != NULL) {
+        spt_remove_page(&t->spt, page);
+      }
+      list_remove(e);
+      free(region);
+    }
+    e = next;
+  }
+}
 /* Do the munmap */
 /* 풀어야 할 점 : addr이 속한 page 말고도 추가 page도 unmap해야할텐데... */
+// mmap리스트를 가져야되긴 하는데.. Cuz process exit시 해당 스레드가 가진
+// mmap들을 전부 munmap 해야 됨
 void do_munmap(void* addr) {
-  //  for (struct list_elem* i = list_begin(&current_thread->children);
-  // i != list_end(&current_thread->children); i = i->next)
-  struct page* page =  spt_find_page(&thread_current()->spt, addr);
-  if (page == NULL) return;
+  if (addr == NULL) return;
 
-  void *upage = addr;
-  size_t remain_read_bytes = page->file.total_file_length;
-  while (remain_read_bytes > 0)
-  {
-    page =  spt_find_page(&thread_current()->spt, upage);
+  struct thread* t = thread_current();
+  struct list* mmap_list = &t->mmap_list;
+  struct mmap_region* region = NULL;
+  struct list_elem* e;
+  struct page* page = NULL;
+  struct file* file = NULL;
 
-    spt_remove_page(&thread_current()->spt, page); // 이고 호출하면 file_backed_destroy 도 호출 됨
-    remain_read_bytes -= page->file.page_read_bytes;
-    upage += PGSIZE;
-  }
+  if (list_empty(mmap_list)) return;
 
-  // pml4_clear_page(thread_current()->pml4, addr);
+  page = spt_find_page(&t->spt, pg_round_down(addr));
+  if (page == NULL || page->mmap_region == NULL) return;
+
+  region = page->mmap_region;
+  file = region->file;
+
+  remove_related_regions(region->base_addr);
+  file_close(file);
 }

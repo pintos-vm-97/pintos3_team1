@@ -547,6 +547,12 @@ int process_wait(tid_t child_tid) {
 void process_exit(void) {
   // 현재 종료 중인 프로세스(thread)를 가져옴
   struct thread* current_thread = thread_current();
+  while (!list_empty(&current_thread->mmap_list)) {
+    struct mmap_region* region = list_entry(list_front(&current_thread->mmap_list),
+                                       struct mmap_region, elem);
+    void* base = region->base_addr;  // do_munmap이 r 포함 전부 제거
+    do_munmap(base);
+  }
 
   // 파일 디스크럽터 테이블(FDT)이 존재한다면 열린 파일을 모두 닫는다.
   if (current_thread->FDT != NULL) {
@@ -1061,11 +1067,10 @@ bool lazy_load_segment(struct page* page, void* aux) {
       llaux->file, kva, (off_t)llaux->page_read_bytes, (off_t)llaux->ofs);
 
   if (read_bytes != llaux->page_read_bytes) {
-    // if (llaux->is_reopened) file_close(llaux->file);
+    if (llaux->is_reopened) file_close(llaux->file);
     free(aux);
     return false;
   }
-
 
   page->writable = llaux->is_writable;
   memset(kva + read_bytes, 0, llaux->page_zero_bytes);
@@ -1101,7 +1106,7 @@ static bool load_segment(struct file* file, off_t ofs, uint8_t* upage,
   /* 읽어야 할 오프셋도 시작주소여야 함 */
   ASSERT(ofs % PGSIZE == 0);
 
-  size_t total_file_length = (size_t) file_length(file);
+  size_t total_file_length = (size_t)file_length(file);
   while (read_bytes > 0 || zero_bytes > 0) {
     /* Do calculate how to fill this page.
      * We will read PAGE_READ_BYTES bytes from FILE
