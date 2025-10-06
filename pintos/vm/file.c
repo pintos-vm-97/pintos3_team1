@@ -3,6 +3,7 @@
 #include "vm/vm.h"
 #include "userprog/process.h"
 #include "threads/vaddr.h"
+#include "threads/mmu.h"
 
 static bool file_backed_swap_in(struct page* page, void* kva);
 static bool file_backed_swap_out(struct page* page);
@@ -54,17 +55,22 @@ static bool file_backed_swap_out(struct page* page) {
 static void file_backed_destroy(struct page* page) {
   // dirty여부 파악하고
   struct file_page* file_page UNUSED = &page->file;
+  if (pml4_is_dirty(thread_current()->pml4, page->va)) {
+
+  }
+  file_close(file_page->file);
 }
 
 /* Do the mmap */
 void* do_mmap(void* addr, size_t length, int writable, struct file* file,
               off_t offset) {
 
-  size_t read_bytes = 0;
+  size_t read_bytes = length;
   void *upage = addr;
 
-  while (1) {
+  while (read_bytes > 0) {
     size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
+    size_t page_zero_bytes = PGSIZE - page_read_bytes;
     upage = pg_round_down(addr);
 
     /* TODO: Set up aux to pass information to the lazy_load_segment. */
@@ -73,6 +79,7 @@ void* do_mmap(void* addr, size_t length, int writable, struct file* file,
     aux->page_read_bytes = page_read_bytes;
     aux->ofs = offset;
     aux->is_writable = writable;
+    aux->page_zero_bytes = page_zero_bytes;
     if (!vm_alloc_page_with_initializer(VM_ANON, upage, writable,
                                         lazy_load_segment, aux)) {
       free(aux);
@@ -84,13 +91,14 @@ void* do_mmap(void* addr, size_t length, int writable, struct file* file,
     offset += page_read_bytes;
     upage += PGSIZE;
   }
-  return NULL;
+  return addr;
 }
 
 /* Do the munmap */
 void do_munmap(void* addr) {
   struct page* page = spt_find_page(&thread_current()->spt, addr);
+  if (page == NULL) return;
 
-  file_backed_destroy(page);
-  
+  pml4_clear_page(thread_current()->pml4, addr);
+  spt_remove_page(&thread_current()->spt, page); // 이고 호출하면 file_backed_destroy 도 호출 됨
 }
