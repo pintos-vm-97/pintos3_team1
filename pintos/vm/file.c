@@ -56,33 +56,45 @@ static void file_backed_destroy(struct page* page) {
   // dirty여부 파악하고
   struct file_page* file_page UNUSED = &page->file;
   if (pml4_is_dirty(thread_current()->pml4, page->va)) {
-
   }
   file_close(file_page->file);
 }
 
 /* Do the mmap */
+// stick out -> 페이지 단위 작업시 페이지 끝 튀어나오는 부분 0으로 처리 필
 void* do_mmap(void* addr, size_t length, int writable, struct file* file,
               off_t offset) {
 
+  ASSERT(addr != 0 || addr != NULL || length > 0 || pg_ofs(addr) == 0);
+
+  off_t f_length = file_length(file);
+
   size_t read_bytes = length;
-  void *upage = addr;
+  size_t total_zero_bytes = (f_length - offset > 0) ? f_length - read_bytes : 0;
+  
+  void* upage = addr;
+
+  struct file* reopened_file = file_reopen(file);
+  if (reopened_file == NULL) return NULL;
 
   while (read_bytes > 0) {
     size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
     size_t page_zero_bytes = PGSIZE - page_read_bytes;
-    upage = pg_round_down(addr);
+    // upage = pg_round_down(addr);
+    upage = pg_round_down(upage);
 
     /* TODO: Set up aux to pass information to the lazy_load_segment. */
     struct lazy_load_aux* aux = malloc(sizeof(struct lazy_load_aux));
-    aux->file = file;
+    aux->file = reopened_file;
     aux->page_read_bytes = page_read_bytes;
     aux->ofs = offset;
     aux->is_writable = writable;
     aux->page_zero_bytes = page_zero_bytes;
-    if (!vm_alloc_page_with_initializer(VM_ANON, upage, writable,
+    aux->is_reopened = true;
+    if (!vm_alloc_page_with_initializer(VM_FILE, upage, writable,
                                         lazy_load_segment, aux)) {
       free(aux);
+      do_munmap(addr);
       return false;
     }
 
@@ -100,5 +112,6 @@ void do_munmap(void* addr) {
   if (page == NULL) return;
 
   pml4_clear_page(thread_current()->pml4, addr);
-  spt_remove_page(&thread_current()->spt, page); // 이고 호출하면 file_backed_destroy 도 호출 됨
+  spt_remove_page(&thread_current()->spt,
+                  page);  // 이고 호출하면 file_backed_destroy 도 호출 됨
 }

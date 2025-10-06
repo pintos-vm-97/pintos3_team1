@@ -180,6 +180,10 @@ struct file* syscall_get_std_file(int fd) {
 }
 
 void *syscall_mmap(void *addr, size_t length, int writable, int fd, off_t offset) {
+  if (fd == 1 || fd == 2) {
+    return NULL;
+  }
+
   struct file *f = process_get_file(fd);
   if (f == NULL) {
     return NULL;

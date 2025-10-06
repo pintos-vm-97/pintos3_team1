@@ -744,7 +744,7 @@ static bool load(const char* file_name, struct intr_frame* if_) {
           uint32_t read_bytes, zero_bytes;
           if (phdr.p_filesz > 0) {
             /* Normal segment.
-            
+
              * Read initial part from disk and zero the rest. */
             read_bytes = page_offset + phdr.p_filesz;
             zero_bytes =
@@ -1075,6 +1075,7 @@ bool lazy_load_segment(struct page* page, void* aux) {
   memset(kva + read_bytes, 0, llaux->page_zero_bytes);
   // todo : reopen했던거는 file_close해야되는데 어디서 할지 나중에 생각하기 (이
   // 함수가 아니더라도 다른 곳에서)
+  if (llaux->is_reopened) file_close(llaux->file);
   free(aux);
   return true;
 }

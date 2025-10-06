@@ -10,6 +10,7 @@ struct lazy_load_aux {
   size_t page_read_bytes;
   size_t page_zero_bytes;
   bool is_writable;
+  bool is_reopened;
 };
 
 bool lazy_load_segment(struct page *page, void *aux);
