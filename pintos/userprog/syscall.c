@@ -161,6 +161,11 @@ void syscall_handler(struct intr_frame* f) {
       f->R.rax = (void *)syscall_mmap((void*)f->R.rdi, (size_t)f->R.rsi, (int)f->R.rdx,
                               (int)f->R.r10, (off_t)f->R.r8);
       break;
+
+    case SYS_MUNMAP:
+      syscall_munmap((void*)f->R.rdi);
+      break;
+
     default:
       printf("system call!\n");
       thread_exit();
@@ -177,6 +182,11 @@ struct file* syscall_get_std_file(int fd) {
     default:
       return NULL;  // 그 외 번호는 표준 스트림이 아니므로 NULL 반환
   }
+}
+
+void syscall_munmap(void *addr){
+  if (addr == NULL) return;
+  do_munmap(addr);
 }
 
 void *syscall_mmap(void *addr, size_t length, int writable, int fd, off_t offset) {

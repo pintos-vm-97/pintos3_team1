@@ -8,11 +8,11 @@ enum vm_type;
 
 struct file_page {
   struct file* file;
+  size_t total_file_length;
   off_t ofs;
   size_t page_read_bytes;
   size_t page_zero_bytes;
   bool is_writable;
-  bool is_loaded_file;
 };
 
 void vm_file_init(void);

@@ -51,7 +51,8 @@ struct page {
   struct frame *frame; /* 해당 물리 프레임을 가리키는 역참조 */
 
   /* 구현해야 할 부분 */
-  struct hash_elem hash_elem;  // hash 소속elem
+  struct hash_elem hash_elem;  // hash 소속 elem
+  struct list_elem mmap_elem;  // mmap list 소속 elem
   bool writable;
   /* 타입별 데이터는 union에 묶여 있다.
    * 각 함수는 현재 union 타입을 자동으로 감지한다. */

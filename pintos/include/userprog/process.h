@@ -6,6 +6,7 @@
 #ifdef VM
 struct lazy_load_aux {
   struct file *file;
+  size_t total_file_length;
   off_t ofs;
   size_t page_read_bytes;
   size_t page_zero_bytes;

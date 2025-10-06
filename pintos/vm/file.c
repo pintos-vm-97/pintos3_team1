@@ -18,7 +18,9 @@ static const struct page_operations file_ops = {
 };
 
 /* The initializer of file vm */
-void vm_file_init(void) {}
+void vm_file_init(void) {
+  // list_init(&thread_current()->mmap_list);
+}
 
 /* Initialize the file backed page */
 bool file_backed_initializer(struct page* page, enum vm_type type, void* kva) {
@@ -57,7 +59,7 @@ static void file_backed_destroy(struct page* page) {
   struct file_page* file_page UNUSED = &page->file;
   if (pml4_is_dirty(thread_current()->pml4, page->va)) {
   }
-  file_close(file_page->file);
+  // file_close(file_page->file);
 }
 
 /* Do the mmap */
@@ -86,6 +88,7 @@ void* do_mmap(void* addr, size_t length, int writable, struct file* file,
     struct lazy_load_aux* aux = malloc(sizeof(struct lazy_load_aux));
     if (aux == NULL) return NULL;
     aux->file = reopened_file;
+    aux->total_file_length = f_length;
     aux->page_read_bytes = page_read_bytes;
     aux->ofs = offset;
     aux->is_writable = writable;
@@ -98,7 +101,6 @@ void* do_mmap(void* addr, size_t length, int writable, struct file* file,
       return false;
     }
 
-    /* Advance. */
     read_bytes -= page_read_bytes;
     total_zero_bytes -= page_zero_bytes;
     offset += page_read_bytes;
@@ -108,11 +110,23 @@ void* do_mmap(void* addr, size_t length, int writable, struct file* file,
 }
 
 /* Do the munmap */
+/* 풀어야 할 점 : addr이 속한 page 말고도 추가 page도 unmap해야할텐데... */
 void do_munmap(void* addr) {
-  struct page* page = spt_find_page(&thread_current()->spt, addr);
+  //  for (struct list_elem* i = list_begin(&current_thread->children);
+  // i != list_end(&current_thread->children); i = i->next)
+  struct page* page =  spt_find_page(&thread_current()->spt, addr);
   if (page == NULL) return;
 
-  pml4_clear_page(thread_current()->pml4, addr);
-  spt_remove_page(&thread_current()->spt,
-                  page);  // 이고 호출하면 file_backed_destroy 도 호출 됨
+  void *upage = addr;
+  size_t remain_read_bytes = page->file.total_file_length;
+  while (remain_read_bytes > 0)
+  {
+    page =  spt_find_page(&thread_current()->spt, upage);
+
+    spt_remove_page(&thread_current()->spt, page); // 이고 호출하면 file_backed_destroy 도 호출 됨
+    remain_read_bytes -= page->file.page_read_bytes;
+    upage += PGSIZE;
+  }
+
+  // pml4_clear_page(thread_current()->pml4, addr);
 }
