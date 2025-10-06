@@ -1066,10 +1066,12 @@ bool lazy_load_segment(struct page* page, void* aux) {
     return false;
   }
 
+
   page->writable = llaux->is_writable;
   memset(kva + read_bytes, 0, llaux->page_zero_bytes);
   // todo : reopen했던거는 file_close해야되는데 어디서 할지 나중에 생각하기 (이
   // 함수가 아니더라도 다른 곳에서)
+  page->file.total_file_length = llaux->total_file_length;
   free(aux);
   return true;
 }
