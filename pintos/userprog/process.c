@@ -1056,11 +1056,6 @@ static bool install_page(void* upage, void* kpage, bool writable) {
 
 bool lazy_load_segment(struct page* page, void* aux) {
   struct lazy_load_aux* llaux = (struct lazy_load_aux*)aux;
-  // 만약 읽은 적이 있다면 재오픈
-  // if (page->file.is_loaded_file) {
-  //   llaux->file = file_reopen(llaux->file);
-  // }
-
   void* kva = page->frame->kva;
   off_t read_bytes = file_read_at(
       llaux->file, kva, (off_t)llaux->page_read_bytes, (off_t)llaux->ofs);
@@ -1071,7 +1066,6 @@ bool lazy_load_segment(struct page* page, void* aux) {
   }
 
   page->writable = llaux->is_writable;
-  // page->file.is_loaded_file = true;
   memset(kva + read_bytes, 0, llaux->page_zero_bytes);
   // todo : reopen했던거는 file_close해야되는데 어디서 할지 나중에 생각하기 (이
   // 함수가 아니더라도 다른 곳에서)
@@ -1119,6 +1113,7 @@ static bool load_segment(struct file* file, off_t ofs, uint8_t* upage,
     aux->page_zero_bytes = page_zero_bytes;
     aux->ofs = ofs;
     aux->is_writable = writable;
+    aux->is_reopened = false;
     if (!vm_alloc_page_with_initializer(VM_ANON, upage, writable,
                                         lazy_load_segment, aux)) {
       free(aux);

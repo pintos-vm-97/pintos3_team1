@@ -64,20 +64,19 @@ static void file_backed_destroy(struct page* page) {
 // stick out -> 페이지 단위 작업시 페이지 끝 튀어나오는 부분 0으로 처리 필
 void* do_mmap(void* addr, size_t length, int writable, struct file* file,
               off_t offset) {
-
   ASSERT(addr != 0 || addr != NULL || length > 0 || pg_ofs(addr) == 0);
 
   off_t f_length = file_length(file);
 
-  size_t read_bytes = length;
+  size_t read_bytes = (f_length > length) ? length : f_length;
   size_t total_zero_bytes = (f_length - offset > 0) ? f_length - read_bytes : 0;
-  
+
   void* upage = addr;
 
   struct file* reopened_file = file_reopen(file);
   if (reopened_file == NULL) return NULL;
 
-  while (read_bytes > 0) {
+  while (read_bytes > 0 || total_zero_bytes == 0) {
     size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
     size_t page_zero_bytes = PGSIZE - page_read_bytes;
     // upage = pg_round_down(addr);
@@ -85,6 +84,7 @@ void* do_mmap(void* addr, size_t length, int writable, struct file* file,
 
     /* TODO: Set up aux to pass information to the lazy_load_segment. */
     struct lazy_load_aux* aux = malloc(sizeof(struct lazy_load_aux));
+    if (aux == NULL) return NULL;
     aux->file = reopened_file;
     aux->page_read_bytes = page_read_bytes;
     aux->ofs = offset;
@@ -100,6 +100,7 @@ void* do_mmap(void* addr, size_t length, int writable, struct file* file,
 
     /* Advance. */
     read_bytes -= page_read_bytes;
+    total_zero_bytes -= page_zero_bytes;
     offset += page_read_bytes;
     upage += PGSIZE;
   }
