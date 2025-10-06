@@ -548,9 +548,9 @@ void process_exit(void) {
   // 현재 종료 중인 프로세스(thread)를 가져옴
   struct thread* current_thread = thread_current();
   while (!list_empty(&current_thread->mmap_list)) {
-    struct mmap_region* region = list_entry(list_front(&current_thread->mmap_list),
-                                       struct mmap_region, elem);
-    void* base = region->base_addr;  // do_munmap이 r 포함 전부 제거
+    struct mmap_region* region = list_entry(
+        list_front(&current_thread->mmap_list), struct mmap_region, elem);
+    void* base = region->base_addr;
     do_munmap(base);
   }
 

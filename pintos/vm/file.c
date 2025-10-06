@@ -86,7 +86,6 @@ void* do_mmap(void* addr, size_t length, int writable, struct file* file,
   while (read_bytes > 0 || total_zero_bytes == 0) {
     size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
     size_t page_zero_bytes = PGSIZE - page_read_bytes;
-    // upage = pg_round_down(addr);
     upage = pg_round_down(upage);
 
     /* TODO: Set up aux to pass information to the lazy_load_segment. */
