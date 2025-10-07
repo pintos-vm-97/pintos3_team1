@@ -83,7 +83,7 @@ void* do_mmap(void* addr, size_t length, int writable, struct file* file,
   struct file* reopened_file = file_reopen(file);
   if (reopened_file == NULL) return NULL;
 
-  while (read_bytes > 0 || total_zero_bytes == 0) {
+  while (read_bytes > 0 || total_zero_bytes > 0) {
     size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
     size_t page_zero_bytes = PGSIZE - page_read_bytes;
     upage = pg_round_down(upage);
@@ -163,6 +163,8 @@ void do_munmap(void* addr) {
   struct file* file = NULL;
 
   if (list_empty(mmap_list)) return;
+  //printf("munmap addr : %p\n", addr);
+
 
   page = spt_find_page(&t->spt, pg_round_down(addr));
   if (page == NULL || page->mmap_region == NULL) return;

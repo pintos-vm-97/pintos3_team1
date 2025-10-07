@@ -156,8 +156,7 @@ void syscall_handler(struct intr_frame* f) {
               .rsi);  // dup2(oldfd, newfd) 요청을 처리하고 반환값을 rax에 기록
       break;
     case SYS_MMAP:
-      // void *mmap(void *addr, size_t length, int writable, int fd, off_t
-      // offset)
+      // (void *addr, size_t length, int writable, int fd, off_t offset)
       f->R.rax = (void *)syscall_mmap((void*)f->R.rdi, (size_t)f->R.rsi, (int)f->R.rdx,
                               (int)f->R.r10, (off_t)f->R.r8);
       break;
