@@ -188,7 +188,14 @@ void syscall_munmap(void *addr){
   do_munmap(addr);
 }
 
+bool is_exist_page(void *addr){
+  return spt_find_page(&thread_current()->spt, addr) != NULL;
+}
+
 void *syscall_mmap(void *addr, size_t length, int writable, int fd, off_t offset) {
+
+  if (is_exist_page(addr)) return NULL;
+
   if (fd == 1 || fd == 2) {
     return NULL;
   }
