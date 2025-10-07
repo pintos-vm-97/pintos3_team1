@@ -381,6 +381,12 @@ int syscall_write(int fd, const void* buffer, unsigned size) {
 int syscall_read(int fd, void* buffer, unsigned size) {
   vali_pointer(buffer, size);  // 사용자 버퍼가 커널에서 접근 가능한지 확인
 
+  struct page* p =
+     spt_find_page(&thread_current()->spt, pg_round_down(buffer));
+  if (p != NULL && !p->writable){
+    syscall_exit(-1);
+  }
+
   struct thread* current = thread_current();
   struct file* file = process_get_file(fd);
   struct file* stdin_file = syscall_get_std_file(STDIN_FILENO);
@@ -517,9 +523,9 @@ bool check_page(const void* user_addr) {
 #ifdef VM
   // VM: spt에서 페이지를 찾아 writable 여부를 확인하기(코드/세그먼트 영역에
   // 쓰기 불가능하도록)
-  struct page* p =
-      spt_find_page(&thread_current()->spt, pg_round_down(user_addr));
-  if (p != NULL) return p->writable;
+  // struct page* p =
+  //     spt_find_page(&thread_current()->spt, pg_round_down(user_addr));
+  // if (p != NULL) return p->writable;
 #endif
   return true;
 }

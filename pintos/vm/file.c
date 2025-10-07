@@ -32,17 +32,18 @@ bool file_backed_initializer(struct page* page, enum vm_type type, void* kva) {
   struct file_page* file_page = &page->file;
   struct lazy_load_aux* aux = page->uninit.aux;
 
-  file_page->file = aux->file;
-  file_page->ofs = aux->ofs;
-  file_page->page_read_bytes = aux->page_read_bytes;
-  file_page->page_zero_bytes = aux->page_zero_bytes;
-  file_page->is_writable = aux->is_writable;
+  // file_page->file = aux->file;
+  // file_page->ofs = aux->ofs;
+  // file_page->page_read_bytes = aux->page_read_bytes;
+  // file_page->page_zero_bytes = aux->page_zero_bytes;
+  // file_page->is_writable = aux->is_writable;
   return true;
 }
 
 /* Swap in the page by read contents from the file. */
 static bool file_backed_swap_in(struct page* page, void* kva) {
   struct file_page* file_page UNUSED = &page->file;
+  return true;
 }
 
 /* Swap out the page by writeback contents to the file. */
@@ -68,7 +69,7 @@ static void file_backed_destroy(struct page* page) {
     lock_release(&file_lock);
   }
   free(page->frame);
-  pml4_clear_page(thread_current()->pml4, page->va);
+  // pml4_clear_page(thread_current()->pml4, page->va);
 }
 
 /* Do the mmap */
@@ -147,6 +148,7 @@ static void remove_related_regions(void* base_addr) {
       struct page* page = spt_find_page(&t->spt, pg_round_down(region->addr));
       if (page != NULL) {
         spt_remove_page(&t->spt, page);
+        //pml4_clear_page(t->pml4, pg_round_down(page->va));
       }
       list_remove(e);
       free(region);
@@ -155,9 +157,7 @@ static void remove_related_regions(void* base_addr) {
   }
 }
 /* Do the munmap */
-/* 풀어야 할 점 : addr이 속한 page 말고도 추가 page도 unmap해야할텐데... */
-// mmap리스트를 가져야되긴 하는데.. Cuz process exit시 해당 스레드가 가진
-// mmap들을 전부 munmap 해야 됨
+
 void do_munmap(void* addr) {
   if (addr == NULL) return;
 
@@ -169,8 +169,6 @@ void do_munmap(void* addr) {
   struct file* file = NULL;
 
   if (list_empty(mmap_list)) return;
-  //printf("munmap addr : %p\n", addr);
-
 
   page = spt_find_page(&t->spt, pg_round_down(addr));
   if (page == NULL || page->mmap_region == NULL) return;

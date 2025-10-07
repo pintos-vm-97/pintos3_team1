@@ -318,7 +318,8 @@ static struct lazy_load_aux* copy_aux(const struct lazy_load_aux* src) {
 static bool copy_uninit_page(struct supplemental_page_table* dst,
                              struct page* src) {
   if (VM_TYPE(src->uninit.type) == VM_ANON) {
-    if (!vm_alloc_page_with_initializer(src->uninit.type, src->va, src->writable, src->uninit.init, NULL)) {
+    if (!vm_alloc_page_with_initializer(
+            src->uninit.type, src->va, src->writable, src->uninit.init, NULL)) {
       return false;
     }
     return true;
@@ -358,13 +359,18 @@ static bool copy_loaded_page(struct supplemental_page_table* dst,
   }
 
   if (!vm_claim_page(va)) return false;
-
   dst_page = spt_find_page(dst, src->va);
   if (dst_page == NULL) return false;
 
-  // 파일 페이지일 경우
-  if (VM_TYPE(type) == VM_FILE) {
-    dst_page->file.file = file_reopen(src->file.file);
+  if (type == VM_FILE) {
+    // 나중에 캡슐화하던가
+    struct file_page* dst_fp = &dst_page->file;
+    struct file_page* src_fp = &src->file;
+    dst_fp->file = file_reopen(src_fp->file);
+    dst_fp->ofs = src_fp->ofs;
+    dst_fp->page_read_bytes = src_fp->page_read_bytes;
+    dst_fp->page_zero_bytes = src_fp->page_zero_bytes;
+    dst_fp->is_writable = src_fp->is_writable;
   }
 
   kva = dst_page->frame->kva;
@@ -381,6 +387,7 @@ static bool copy_page(struct supplemental_page_table* dst, struct page* src) {
 
     default:
       copy_succ = copy_loaded_page(dst, src);
+      break;
   }
   return copy_succ;
 }
@@ -406,12 +413,18 @@ bool supplemental_page_table_copy(struct supplemental_page_table* dst UNUSED,
 }
 
 /* Free the resource hold by the supplemental page table */
+/**
+ * 삭제 필요한거 생각해보기
+ * - frame : free
+ * - page : free
+ * - frame-kva : palloc_free
+ */
 void supplemental_page_table_kill(struct supplemental_page_table* spt) {
   ASSERT(spt != NULL);
-  hash_clear(&spt->page_table, destruct_hash_elem);
-  // hash_destroy(&spt->page_table, destruct_hash_elem);
-  //  모든 자원 해제하라네? 뭐할까요? 일단 page, elem,
-
+  hash_clear(&spt->page_table,
+             destruct_hash_elem);  // 일단 여기서 페이지별 destroy함수 호출 뒤
+                                   // page free
+  // Page 타입별 destroy가 핵심일듯?
   /* TODO: Destroy all the supplemental_page_table hold by thread and
    * TODO: writeback all the modified contents to the storage. */
   // TODO: file-backed일 때 dirty 시 쓰기 필요

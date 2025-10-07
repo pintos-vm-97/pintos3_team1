@@ -1062,6 +1062,15 @@ static bool install_page(void* upage, void* kpage, bool writable) {
 
 bool lazy_load_segment(struct page* page, void* aux) {
   struct lazy_load_aux* llaux = (struct lazy_load_aux*)aux;
+  struct file_page* file_page = &page->file;
+  //struct lazy_load_aux* aux = page->uninit.aux;
+
+  file_page->file = llaux->file;
+  file_page->ofs = llaux->ofs;
+  file_page->page_read_bytes = llaux->page_read_bytes;
+  file_page->page_zero_bytes = llaux->page_zero_bytes;
+  file_page->is_writable = llaux->is_writable;
+
   void* kva = page->frame->kva;
   off_t read_bytes = file_read_at(
       llaux->file, kva, (off_t)llaux->page_read_bytes, (off_t)llaux->ofs);
@@ -1163,6 +1172,7 @@ static bool setup_stack(struct intr_frame* if_) {
   // va기준으로 제대로 page구현된거 확인 후 rsp 및 success 조정
   p = pml4_get_page(cur->pml4, stack_bottom);
   if (p != NULL) {
+    p->writable = true;
     if_->rsp = USER_STACK;
     success = true;
   }
