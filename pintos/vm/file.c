@@ -10,6 +10,8 @@ static bool file_backed_swap_in(struct page* page, void* kva);
 static bool file_backed_swap_out(struct page* page);
 static void file_backed_destroy(struct page* page);
 
+struct lock file_lock;
+
 /* DO NOT MODIFY this struct */
 static const struct page_operations file_ops = {
     .swap_in = file_backed_swap_in,
@@ -20,7 +22,7 @@ static const struct page_operations file_ops = {
 
 /* The initializer of file vm */
 void vm_file_init(void) {
-  // list_init(&thread_current()->mmap_list);
+  lock_init(&file_lock);
 }
 
 /* Initialize the file backed page */
@@ -58,10 +60,14 @@ static bool file_backed_swap_out(struct page* page) {
 static void file_backed_destroy(struct page* page) {
   // dirty여부 파악하고
   struct file_page* file_page UNUSED = &page->file;
-  free(page->frame);
   if (pml4_is_dirty(thread_current()->pml4, page->va)) {
+    off_t ofs = page->file.ofs;
+    size_t read_bytes = page->file.page_read_bytes;
+    lock_acquire(&file_lock);
+    file_write_at(page->file.file, page->frame->kva, read_bytes, ofs);
+    lock_release(&file_lock);
   }
-  // file_close(file_page->file);
+  free(page->frame);
   pml4_clear_page(thread_current()->pml4, page->va);
 }
 
