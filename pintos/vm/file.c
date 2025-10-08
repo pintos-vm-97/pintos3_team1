@@ -21,9 +21,7 @@ static const struct page_operations file_ops = {
 };
 
 /* The initializer of file vm */
-void vm_file_init(void) {
-  lock_init(&file_lock);
-}
+void vm_file_init(void) { lock_init(&file_lock); }
 
 /* Initialize the file backed page */
 bool file_backed_initializer(struct page* page, enum vm_type type, void* kva) {
@@ -51,7 +49,8 @@ static bool file_backed_swap_in(struct page* page, void* kva) {
 static bool dirty_writeback(struct page* page) {
   struct file_page* file_page = &page->file;
   lock_acquire(&file_lock);
-  file_write_at(file_page->file, page->frame->kva, file_page->page_read_bytes, file_page->ofs);
+  file_write_at(file_page->file, page->frame->kva, file_page->page_read_bytes,
+                file_page->ofs);
   lock_release(&file_lock);
 }
 /**
@@ -60,14 +59,19 @@ static bool dirty_writeback(struct page* page) {
  *
  */
 static bool file_backed_swap_out(struct page* page) {
-  struct file_page* file_page UNUSED = &page->file;
+  struct file_page* file_page = &page->file;
   struct file* f = file_page->file;
   if (pml4_is_dirty(thread_current()->pml4, page->va)) {
     dirty_writeback(page);
   }
   // mmap region일 경우도 추가해야 하나? unmap
-  file_close(f);
-  page->frame = NULL;
+  if (page->mmap_region) {
+    do_munmap(page->mmap_region->base_addr);
+  } else {
+    lock_acquire(&file_lock);
+    file_close(f);
+    lock_release(&file_lock);
+  }
   return true;
 }
 
@@ -79,8 +83,7 @@ static void file_backed_destroy(struct page* page) {
     dirty_writeback(page);
   }
 
-  // free(page->frame); 얘가 여기까지?
-  pml4_clear_page(thread_current()->pml4, page->va);
+  pml4_clear_page(thread_current()->pml4, pg_round_down(page->va));
 }
 
 /* Do the mmap */
@@ -91,7 +94,6 @@ void* do_mmap(void* addr, size_t length, int writable, struct file* file,
 
   struct lazy_load_aux* aux = NULL;
   off_t f_length = file_length(file);
-  // if (f_length < length) return NULL;
 
   size_t read_bytes = (f_length > length) ? length : f_length;
   size_t total_zero_bytes = PGSIZE - (read_bytes % PGSIZE);
@@ -159,10 +161,13 @@ static void remove_related_regions(void* base_addr) {
     if (region != NULL && region->base_addr == base_addr) {
       struct page* page = spt_find_page(&t->spt, pg_round_down(region->addr));
       if (page != NULL) {
-        spt_remove_page(&t->spt, page);
+        struct frame* frame = page->frame;
         //pml4_clear_page(t->pml4, pg_round_down(page->va));
+        spt_remove_page(&t->spt, page); // 얘가 pml4_clear도 해줌
+        if (frame != NULL) dealloc_frame(frame);
       }
       list_remove(e);
+
       free(region);
     }
     e = next;

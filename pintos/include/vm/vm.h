@@ -145,4 +145,6 @@ bool vm_claim_page(void *va);
 // ❌
 enum vm_type page_get_type(struct page *page);
 
+void dealloc_frame(struct frame *frame);
+
 #endif

@@ -113,6 +113,5 @@ static void anon_destroy(struct page *page) {
     bitmap_set(swap_bitmap, anon_page->slot_idx, false);
   }
   lock_release(&swap_lock);
-  // free(page->frame);
   pml4_clear_page(page->frame->owner_pml4, page->va);
 }

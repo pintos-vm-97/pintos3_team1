@@ -468,3 +468,10 @@ void supplemental_page_table_kill(struct supplemental_page_table* spt) {
    * TODO: writeback all the modified contents to the storage. */
   // TODO: file-backed일 때 dirty 시 쓰기 필요
 }
+
+void dealloc_frame(struct frame* frame) {
+  ASSERT(frame != NULL);
+  palloc_free_page(frame->kva);
+  list_remove(&frame->elem);
+  free(frame);
+}
