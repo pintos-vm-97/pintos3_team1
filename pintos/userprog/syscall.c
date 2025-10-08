@@ -157,7 +157,13 @@ void syscall_handler(struct intr_frame* f) {
       break;
     case SYS_MMAP:
       // (void *addr, size_t length, int writable, int fd, off_t offset)
-      f->R.rax = (void *)syscall_mmap((void*)f->R.rdi, (size_t)f->R.rsi, (int)f->R.rdx,
+      int64_t length = f->R.rsi;
+      if (length <= 0) {
+        f->R.rax = NULL;
+        break;
+      }
+
+      f->R.rax = (void *)syscall_mmap((void*)f->R.rdi, (size_t) length, (int)f->R.rdx,
                               (int)f->R.r10, (off_t)f->R.r8);
       break;
 
@@ -193,9 +199,8 @@ bool is_exist_page(void *addr){
 }
 
 void *syscall_mmap(void *addr, size_t length, int writable, int fd, off_t offset) {
-
-  if (addr == NULL || length == 0 ) return NULL;
-  if (fd == 1 || fd == 2 || fd < 0) return NULL;
+  if (addr == NULL || pg_ofs(addr) != 0 || length <= 0) return NULL;
+  if (fd <= 2) return NULL;
   if (offset < 0 || (offset % PGSIZE) != 0) return NULL;
   if (is_exist_page(addr)) return NULL;
   if (is_kernel_vaddr(addr)) return NULL;
@@ -205,7 +210,7 @@ void *syscall_mmap(void *addr, size_t length, int writable, int fd, off_t offset
     return NULL;
   }
 
-  void *vaddr = do_mmap(addr, length, writable, f, offset);
+  void *vaddr = do_mmap(addr, (size_t) length, writable, f, offset);
   return vaddr;
 }
 

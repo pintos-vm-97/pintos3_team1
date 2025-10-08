@@ -91,7 +91,7 @@ void* do_mmap(void* addr, size_t length, int writable, struct file* file,
 
   struct lazy_load_aux* aux = NULL;
   off_t f_length = file_length(file);
-  //if (f_length < offset) return NULL;
+  // if (f_length < length) return NULL;
 
   size_t read_bytes = (f_length > length) ? length : f_length;
   size_t total_zero_bytes = PGSIZE - (read_bytes % PGSIZE);
