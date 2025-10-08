@@ -184,7 +184,7 @@ struct file* syscall_get_std_file(int fd) {
 }
 
 void syscall_munmap(void *addr){
-  if (addr == NULL) return;
+  if (addr == NULL || is_kernel_vaddr(addr)) return;
   do_munmap(addr);
 }
 
@@ -196,6 +196,8 @@ void *syscall_mmap(void *addr, size_t length, int writable, int fd, off_t offset
 
   if (is_exist_page(addr)) return NULL;
   if (fd == 1 || fd == 2 || length == 0) return NULL;
+  if ((offset % PGSIZE) != 0) return NULL;
+  if (is_kernel_vaddr(addr)) return NULL;
 
   struct file *f = process_get_file(fd);
   if (f == NULL) {
