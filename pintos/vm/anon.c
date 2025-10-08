@@ -9,6 +9,7 @@
 #include "threads/malloc.h"
 #include "threads/mmu.h"
 #include "vm/vm.h"
+#include "threads/synch.h"
 
 #define SECTORS_PER_PAGE (PGSIZE / DISK_SECTOR_SIZE)
 
@@ -36,6 +37,7 @@ void vm_anon_init(void) {
   disk_sector_t total_sectors = disk_size(swap_disk);
   size_t total_slots = total_sectors / SECTORS_PER_PAGE;
   swap_bitmap = bitmap_create(total_slots);
+  lock_init(&swap_lock);
 }
 
 /* Initialize the file mapping */
