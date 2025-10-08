@@ -106,7 +106,8 @@ static bool anon_swap_out(struct page *page) {
 
   anon_page->slot_idx = slot_idx;
   pml4_clear_page(thread_current()->pml4, page->va);
-  free(page->frame);
+  page->frame = NULL;
+  //free(page->frame); // 이거 제거하면 evict에서 frame이 사라짐 frame해체는 이거 호출하는 쪽으로 ㄱ
   return true;
 }
 

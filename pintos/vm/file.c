@@ -55,6 +55,11 @@ static bool file_backed_swap_in(struct page* page, void* kva) {
  */
 static bool file_backed_swap_out(struct page* page) {
   struct file_page* file_page UNUSED = &page->file;
+  if (pml4_is_dirty(thread_current()->pml4, page->va)) {
+
+  }
+  file_close(file_page->file);
+  page->frame = NULL;
 }
 
 /* Destory the file backed page. PAGE will be freed by the caller. */

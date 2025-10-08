@@ -9,8 +9,10 @@
 #include "threads/mmu.h"
 #include "userprog/process.h"
 
-struct list frame_list;
+struct list* frame_table;
 struct lock frame_lock;
+
+struct list_elem* clock_ptr;
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -22,8 +24,9 @@ void vm_init(void) {
 #endif
   register_inspect_intr();
   /* DO NOT MODIFY UPPER LINES. */
-  list_init(&frame_list);
+  list_init(frame_table);
   lock_init(&frame_lock);
+  clock_ptr = list_begin(frame_table);
 }
 
 /* Get the type of the page. This function is useful if you want to know the
@@ -143,27 +146,53 @@ void spt_remove_page(struct supplemental_page_table* spt, struct page* page) {
 /* Get the struct frame, that will be evicted. */
 static struct frame* vm_get_victim(void) {
   struct frame* victim = NULL;
+  struct list_elem* e = NULL;
+  uint64_t* pml4 = thread_current()->pml4;
   /* TODO: The policy for eviction is up to you. */
-  if (list_empty(&frame_list)) {
+  if (list_empty(&frame_table)) {
     return NULL;
   }
 
-  // 나중에 frame_list 구조 수정 : 제일 오래 사용안된게 앞에 오도록 (accessed,
-  // dirty bit 사용)
-  return list_entry(list_begin(&frame_list), struct frame, elem);
+  lock_acquire(&frame_lock);
+  while (victim == NULL) {
+    struct frame* candidate = NULL;
+    for (e = clock_ptr; e != list_end(&frame_table); e = list_next(e)) {
+      candidate = list_entry(e, struct frame, elem);
+      if (candidate == NULL) continue;
+      if (pml4_is_accessed(pml4, candidate->page->va)) {
+        pml4_set_accessed(pml4, candidate->page->va, false);
+      } else {
+        victim = candidate;
+        break;
+      }
+    }
+
+    clock_ptr = victim ? list_next(e) : list_begin(&frame_table);
+  }
+  lock_release(&frame_lock);
+  return victim;
 }
 
 /* Evict one page and return the corresponding frame.
  * Return NULL on error.*/
+/* TODO: swap out the victim and return the evicted frame. */
 static struct frame* vm_evict_frame(void) {
   struct frame* victim UNUSED = vm_get_victim();
-  if (victim == NULL) {
+  struct page* page = NULL;
+
+  if (victim == NULL){
     return NULL;
   }
-  /* TODO: swap out the victim and return the evicted frame. */
-  // 해당 frame 참조하는 page들 참조 제거??
 
-  return NULL;
+  if ((page = victim->page) == NULL) {
+    return victim;
+  }
+
+  if (!swap_out(page)) {
+    return NULL;
+  }
+  victim->page = NULL;
+  return victim;
 }
 
 /* palloc() and get frame. If there is no available page, evict the page
@@ -180,12 +209,11 @@ struct frame* vm_get_frame(void) {
     frame = malloc(sizeof(struct frame));
     if (frame == NULL) {
       palloc_free_page(kva);
+    } else {
+      frame->kva = kva;
+      frame->page = NULL;
     }
-    frame->kva = kva;
-    frame->page = NULL;
   }
-  // list_insert(frame->elem,
-  // todo : 나중에 LRU func만들고 list_insert_ordered하기
 
   ASSERT(frame != NULL);
   ASSERT(frame->page == NULL);
