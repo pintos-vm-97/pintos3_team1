@@ -67,12 +67,14 @@ static bool anon_swap_in(struct page *page, void *kva) {
   if (f == NULL) return false;
   page->frame = f;
   page->frame->kva = kva;
-  
 
+
+  lock_acquire(&swap_lock);
   for (int i = 0; i < SECTORS_PER_PAGE; i++){
     sector_no = (slot_idx * SECTORS_PER_PAGE) + i;
     disk_read(swap_disk, sector_no, kva + (i * DISK_SECTOR_SIZE));
   }
+  lock_release(&swap_lock);
 
   bitmap_set(swap_bitmap, slot_idx, false);
   anon_page->slot_idx = NULL;
@@ -93,10 +95,12 @@ static bool anon_swap_out(struct page *page) {
 
   if (slot_idx == BITMAP_ERROR) return false;
 
+  lock_acquire(&swap_lock);
   for (int i = 0; i < SECTORS_PER_PAGE; i++){
     disk_sector_t sector = (slot_idx * SECTORS_PER_PAGE) + i;
     disk_write(swap_disk, sector, kva + (i * DISK_SECTOR_SIZE));
   }
+  lock_release(&swap_lock);
 
   anon_page->slot_idx = slot_idx;
   pml4_clear_page(thread_current()->pml4, page->va);
