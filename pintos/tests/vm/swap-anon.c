@@ -17,7 +17,7 @@
 #define PAGE_SIZE (1 << PAGE_SHIFT)
 #define ONE_MB (1 << 20)  // 1MB
 #define CHUNK_SIZE (20 * ONE_MB)
-#define PAGE_COUNT (CHUNK_SIZE / PAGE_SIZE)
+#define PAGE_COUNT (CHUNK_SIZE / PAGE_SIZE) // 5120번정도 
 
 static char big_chunks[CHUNK_SIZE];
 

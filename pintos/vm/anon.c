@@ -79,9 +79,9 @@ static bool anon_swap_in(struct page *page, void *kva) {
   lock_release(&swap_lock);
 
   bitmap_set(swap_bitmap, slot_idx, false);
-  anon_page->slot_idx = NULL;
+  anon_page->slot_idx = SIZE_MAX;
   pml4_set_page(thread_current()->pml4, page->va, kva, true);
-  return page->uninit.page_initializer(page, VM_ANON, kva);
+  return true;
 }
 
 /* Swap out the page by writing contents to the swap disk. */
@@ -118,6 +118,7 @@ static void anon_destroy(struct page *page) {
     bitmap_set(swap_bitmap, anon_page->slot_idx, false);
   }
 
+  // list_remove(&page->elem);
   free(page->frame);
   pml4_clear_page(thread_current()->pml4, page->va);
 }

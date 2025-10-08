@@ -217,6 +217,7 @@ struct frame* vm_get_frame(void) {
 
   ASSERT(frame != NULL);
   ASSERT(frame->page == NULL);
+  list_push_back(&frame_table, &frame->elem);
   return frame;
 }
 
@@ -261,7 +262,12 @@ bool vm_try_handle_fault(struct intr_frame* f, void* addr, bool user,
       return false;  // writable은 false인데 write가 true로 오면 false
     }
 
-    return vm_do_claim_page(page);
+    bool result = vm_do_claim_page(page);
+    if (!result){
+      return false;
+    } else {
+      return true;
+    }
   }
   // page가 없으면 stack 확장 여부 판단 필요
   return can_grow_stack(f, addr, user) ? vm_stack_growth(upage) : false;
