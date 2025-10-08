@@ -154,10 +154,9 @@ static void remove_related_regions(void* base_addr) {
   struct list* mmap_list = &t->mmap_list;
   struct list_elem* e = list_begin(mmap_list);
 
-  while (e != list_end(mmap_list)) {
+  for (e = list_begin(mmap_list); e != list_end(mmap_list);){
     struct list_elem* next = list_next(e);
     struct mmap_region* region = list_entry(e, struct mmap_region, elem);
-
     if (region != NULL && region->base_addr == base_addr) {
       struct page* page = spt_find_page(&t->spt, pg_round_down(region->addr));
       if (page != NULL) {
@@ -167,7 +166,6 @@ static void remove_related_regions(void* base_addr) {
         if (frame != NULL) dealloc_frame(frame);
       }
       list_remove(e);
-
       free(region);
     }
     e = next;
