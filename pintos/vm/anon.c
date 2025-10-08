@@ -17,6 +17,7 @@
 static struct disk *swap_disk;
 static struct bitmap *swap_bitmap;
 static struct lock swap_lock;
+static size_t max_bitmap_idx;
 
 static bool anon_swap_in(struct page *page, void *kva);
 static bool anon_swap_out(struct page *page);
@@ -37,6 +38,7 @@ void vm_anon_init(void) {
   disk_sector_t total_sectors = disk_size(swap_disk);
   size_t total_slots = total_sectors / SECTORS_PER_PAGE;
   swap_bitmap = bitmap_create(total_slots);
+  max_bitmap_idx = total_slots - 1;
   lock_init(&swap_lock);
 }
 
@@ -108,7 +110,7 @@ static bool anon_swap_out(struct page *page) {
 static void anon_destroy(struct page *page) {
   struct anon_page *anon_page = &page->anon;
   lock_acquire(&swap_lock);
-  if (anon_page->slot_idx != SIZE_MAX) {
+  if (anon_page->slot_idx < max_bitmap_idx) {
     bitmap_set(swap_bitmap, anon_page->slot_idx, false);
   }
   lock_release(&swap_lock);

@@ -189,14 +189,15 @@ void syscall_munmap(void *addr){
 }
 
 bool is_exist_page(void *addr){
-  return spt_find_page(&thread_current()->spt, addr) != NULL;
+  return spt_find_page(&thread_current()->spt, pg_round_down(addr)) != NULL;
 }
 
 void *syscall_mmap(void *addr, size_t length, int writable, int fd, off_t offset) {
 
+  if (addr == NULL || length == 0 ) return NULL;
+  if (fd == 1 || fd == 2 || fd < 0) return NULL;
+  if (offset < 0 || (offset % PGSIZE) != 0) return NULL;
   if (is_exist_page(addr)) return NULL;
-  if (fd == 1 || fd == 2 || length == 0) return NULL;
-  if ((offset % PGSIZE) != 0) return NULL;
   if (is_kernel_vaddr(addr)) return NULL;
 
   struct file *f = process_get_file(fd);
