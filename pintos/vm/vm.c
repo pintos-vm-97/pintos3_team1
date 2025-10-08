@@ -49,8 +49,7 @@ static struct frame *vm_evict_frame(void);
 bool vm_alloc_page_with_initializer(enum vm_type type, void *upage,
                                     bool writable, vm_initializer *init,
                                     void *aux) {
-  // 외부에서 uninit type 날리면 안됨.
-  ASSERT(VM_TYPE(type) != VM_UNINIT)
+  // 외부에서 uninit type 날리면 안됨. ASSERT(VM_TYPE(type) != VM_UNINIT)
 
   struct supplemental_page_table *spt = &thread_current()->spt;
 
@@ -80,6 +79,8 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage,
 
     /* uninit 페이지로 초기화 후 spt테이블 삽입 */
     uninit_new(page, upage, init, type, aux, initializer);
+    page->writable = writable;
+
     if (!spt_insert_page(spt, page)) {
       free(page);
       goto err;
@@ -98,7 +99,7 @@ struct page *spt_find_page(struct supplemental_page_table *spt, void *va) {
   // va만 삽입한 가짜 hash_elem을 보내는 방식
   /* TODO: Fill this function. */
   /* va만 저장할 껍데기 페이지 */
-  struct page *temp_page;
+  struct page temp_page;
 
   /* 찾을 페이지의 elem*/
   struct hash_elem *e = NULL;
@@ -106,8 +107,8 @@ struct page *spt_find_page(struct supplemental_page_table *spt, void *va) {
   /* e를 이용해 복구될 페이지 */
   struct page *page = NULL;
 
-  temp_page->va = pg_round_down(va);
-  e = hash_find(&spt->page_table, &temp_page->hash_elem);
+  temp_page.va = pg_round_down(va);
+  e = hash_find(&spt->page_table, &temp_page.hash_elem);
   if (e != NULL) {
     page = hash_entry(e, struct page, hash_elem);
   }
@@ -121,7 +122,7 @@ bool spt_insert_page(struct supplemental_page_table *spt, struct page *page) {
   struct hash_elem *result_elem =
       hash_insert(&spt->page_table, &page->hash_elem);
 
-  if (result_elem == &page->hash_elem) {
+  if (result_elem == NULL) {
     succ = true;
   }
   return succ;
@@ -169,9 +170,9 @@ static struct frame *vm_get_frame(void) {
     }
     frame->kva = kva;
     frame->page = NULL;
-    // list_insert(frame->elem,
-    // todo : 나중에 LRU func만들고 list_insert_ordered하기
   }
+  // list_insert(frame->elem,
+  // todo : 나중에 LRU func만들고 list_insert_ordered하기
 
   ASSERT(frame != NULL);
   ASSERT(frame->page == NULL);
@@ -190,7 +191,7 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr, bool user,
   /* addr 없으면 false*/
   if (addr == NULL) return false;
   /* 유저영역주소가 아니라면 (커널) false)*/
-  if (!user) return false;
+  if (!is_user_vaddr(addr)) return false;
   /* PTE가 있는데 들어왔다면 false */
   if (!not_present) return false;
 
@@ -223,8 +224,8 @@ bool vm_claim_page(void *va) {
   if (va == NULL || is_kernel_vaddr(va)) {
     return false;
   }
-
-  page = spt_find_page(thread_current()->pml4, va);
+  // spt를 넣어야함.
+  page = spt_find_page(&thread_current()->spt, va);
   if (page == NULL) {
     return false;
   }
@@ -245,7 +246,9 @@ static bool vm_do_claim_page(struct page *page) {
   page->frame = frame;
 
   /* TODO: Insert page table entry to map page's VA to frame's PA. */
-  pml4_set_page(thread_current()->pml4, page->va, frame->kva, page->writable);
+  if (!pml4_set_page(thread_current()->pml4, page->va, frame->kva,
+                     page->writable))
+    return false;
 
   return swap_in(page, frame->kva);
 }
