@@ -47,6 +47,13 @@ static bool file_backed_swap_in(struct page* page, void* kva) {
 }
 
 /* Swap out the page by writeback contents to the file. */
+
+static bool dirty_writeback(struct page* page) {
+  struct file_page* file_page = &page->file;
+  lock_acquire(&file_lock);
+  file_write_at(file_page->file, page->frame->kva, file_page->page_read_bytes, file_page->ofs);
+  lock_release(&file_lock);
+}
 /**
  * Dirty 확인 필요
  * - Dirty 시 disk로 쓰기 작업 必
@@ -55,10 +62,12 @@ static bool file_backed_swap_in(struct page* page, void* kva) {
  */
 static bool file_backed_swap_out(struct page* page) {
   struct file_page* file_page UNUSED = &page->file;
+  struct file* f = file_page->file;
   if (pml4_is_dirty(thread_current()->pml4, page->va)) {
-
+    dirty_writeback(page);
   }
-  file_close(file_page->file);
+  // mmap region일 경우도 추가해야 하나? unmap
+  file_close(f);
   page->frame = NULL;
 }
 
@@ -67,14 +76,11 @@ static void file_backed_destroy(struct page* page) {
   // dirty여부 파악하고
   struct file_page* file_page UNUSED = &page->file;
   if (pml4_is_dirty(thread_current()->pml4, page->va)) {
-    off_t ofs = page->file.ofs;
-    size_t read_bytes = page->file.page_read_bytes;
-    lock_acquire(&file_lock);
-    file_write_at(page->file.file, page->frame->kva, read_bytes, ofs);
-    lock_release(&file_lock);
+    dirty_writeback(page);
   }
+
   free(page->frame);
-  // pml4_clear_page(thread_current()->pml4, page->va);
+  pml4_clear_page(thread_current()->pml4, page->va);
 }
 
 /* Do the mmap */

@@ -114,4 +114,10 @@ static bool anon_swap_out(struct page *page) {
 /* Destroy the anonymous page. PAGE will be freed by the caller. */
 static void anon_destroy(struct page *page) {
   struct anon_page *anon_page = &page->anon;
+  if (anon_page->slot_idx != SIZE_MAX) {
+    bitmap_set(swap_bitmap, anon_page->slot_idx, false);
+  }
+
+  free(page->frame);
+  pml4_clear_page(thread_current()->pml4, page->va);
 }
