@@ -9,7 +9,7 @@
 #include "threads/mmu.h"
 #include "userprog/process.h"
 
-struct list* frame_table;
+struct list frame_table;
 struct lock frame_lock;
 
 struct list_elem* clock_ptr;
@@ -24,9 +24,9 @@ void vm_init(void) {
 #endif
   register_inspect_intr();
   /* DO NOT MODIFY UPPER LINES. */
-  list_init(frame_table);
+  list_init(&frame_table);
   lock_init(&frame_lock);
-  clock_ptr = list_begin(frame_table);
+  clock_ptr = list_begin(&frame_table);
 }
 
 /* Get the type of the page. This function is useful if you want to know the

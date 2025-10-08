@@ -58,7 +58,6 @@ static bool dirty_writeback(struct page* page) {
  * Dirty 확인 필요
  * - Dirty 시 disk로 쓰기 작업 必
  *
- * spt에 elem 제거 必
  */
 static bool file_backed_swap_out(struct page* page) {
   struct file_page* file_page UNUSED = &page->file;
@@ -69,6 +68,7 @@ static bool file_backed_swap_out(struct page* page) {
   // mmap region일 경우도 추가해야 하나? unmap
   file_close(f);
   page->frame = NULL;
+  return true;
 }
 
 /* Destory the file backed page. PAGE will be freed by the caller. */
