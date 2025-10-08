@@ -79,7 +79,7 @@ static void file_backed_destroy(struct page* page) {
     dirty_writeback(page);
   }
 
-  free(page->frame);
+  // free(page->frame); 얘가 여기까지?
   pml4_clear_page(thread_current()->pml4, page->va);
 }
 

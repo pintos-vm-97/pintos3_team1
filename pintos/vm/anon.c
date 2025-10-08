@@ -63,22 +63,16 @@ static bool anon_swap_in(struct page *page, void *kva) {
   struct frame* f = NULL;
   size_t slot_idx = anon_page->slot_idx;
 
+  lock_acquire(&swap_lock);
   if (slot_idx == SIZE_MAX || !bitmap_test(swap_bitmap, slot_idx)) return false;
 
-  f = vm_get_frame();
-  if (f == NULL) return false;
-  page->frame = f;
-  page->frame->kva = kva;
-
-
-  lock_acquire(&swap_lock);
   for (int i = 0; i < SECTORS_PER_PAGE; i++){
     sector_no = (slot_idx * SECTORS_PER_PAGE) + i;
     disk_read(swap_disk, sector_no, kva + (i * DISK_SECTOR_SIZE));
   }
+  bitmap_set(swap_bitmap, slot_idx, false);
   lock_release(&swap_lock);
 
-  bitmap_set(swap_bitmap, slot_idx, false);
   anon_page->slot_idx = SIZE_MAX;
   pml4_set_page(thread_current()->pml4, page->va, kva, true);
   return true;
@@ -93,11 +87,10 @@ static bool anon_swap_in(struct page *page, void *kva) {
 static bool anon_swap_out(struct page *page) {
   struct anon_page *anon_page = &page->anon;
   void *kva = page->frame->kva;
+  lock_acquire(&swap_lock);
   size_t slot_idx = bitmap_scan_and_flip(swap_bitmap, 0, 1, false); // false 는 빈거
-
   if (slot_idx == BITMAP_ERROR) return false;
 
-  lock_acquire(&swap_lock);
   for (int i = 0; i < SECTORS_PER_PAGE; i++){
     disk_sector_t sector = (slot_idx * SECTORS_PER_PAGE) + i;
     disk_write(swap_disk, sector, kva + (i * DISK_SECTOR_SIZE));
@@ -114,11 +107,11 @@ static bool anon_swap_out(struct page *page) {
 /* Destroy the anonymous page. PAGE will be freed by the caller. */
 static void anon_destroy(struct page *page) {
   struct anon_page *anon_page = &page->anon;
+  lock_acquire(&swap_lock);
   if (anon_page->slot_idx != SIZE_MAX) {
     bitmap_set(swap_bitmap, anon_page->slot_idx, false);
   }
-
-  // list_remove(&page->elem);
-  free(page->frame);
+  lock_release(&swap_lock);
+  // free(page->frame);
   pml4_clear_page(thread_current()->pml4, page->va);
 }
