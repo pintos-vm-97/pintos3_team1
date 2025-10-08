@@ -74,7 +74,7 @@ static bool anon_swap_in(struct page *page, void *kva) {
   lock_release(&swap_lock);
 
   anon_page->slot_idx = SIZE_MAX;
-  pml4_set_page(thread_current()->pml4, page->va, kva, true);
+  pml4_set_page(page->frame->owner_pml4, page->va, kva, true);
   return true;
 }
 
@@ -97,8 +97,8 @@ static bool anon_swap_out(struct page *page) {
   }
   lock_release(&swap_lock);
 
-  anon_page->slot_idx = slot_idx;
-  pml4_clear_page(thread_current()->pml4, page->va);
+  anon_page->slot_idx = -1;
+  pml4_clear_page(page->frame, page->va);
   page->frame = NULL;
   //free(page->frame); // 이거 제거하면 evict에서 frame이 사라짐 frame해체는 이거 호출하는 쪽으로 ㄱ
   return true;
@@ -113,5 +113,5 @@ static void anon_destroy(struct page *page) {
   }
   lock_release(&swap_lock);
   // free(page->frame);
-  pml4_clear_page(thread_current()->pml4, page->va);
+  pml4_clear_page(page->frame->owner_pml4, page->va);
 }

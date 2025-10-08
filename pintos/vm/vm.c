@@ -214,6 +214,7 @@ struct frame* vm_get_frame(void) {
       frame->page = NULL;
     }
   }
+  frame->owner_pml4 = thread_current()->pml4;
 
   ASSERT(frame != NULL);
   ASSERT(frame->page == NULL);
@@ -320,6 +321,7 @@ static bool vm_do_claim_page(struct page* page) {
 
   frame->page = page;
   page->frame = frame;
+  frame->owner_pml4 = thread_current()->pml4;
 
   /* TODO: Insert page table entry to map page's VA to frame's PA. */
   if (!pml4_set_page(thread_current()->pml4, page->va, frame->kva,
