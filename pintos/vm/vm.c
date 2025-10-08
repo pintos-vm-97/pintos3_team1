@@ -159,8 +159,8 @@ static struct frame* vm_get_victim(void) {
     for (e = clock_ptr; e != list_end(&frame_table); e = list_next(e)) {
       candidate = list_entry(e, struct frame, elem);
       if (candidate == NULL) continue;
-      if (pml4_is_accessed(pml4, candidate->page->va)) {
-        pml4_set_accessed(pml4, candidate->page->va, false);
+      if (pml4_is_accessed(candidate->owner_pml4, candidate->page->va)) {
+        pml4_set_accessed(candidate->owner_pml4, candidate->page->va, false);
       } else {
         victim = candidate;
         break;
@@ -191,7 +191,9 @@ static struct frame* vm_evict_frame(void) {
   if (!swap_out(page)) {
     return NULL;
   }
+  pml4_clear_page(victim->owner_pml4, page->va);
   victim->page = NULL;
+  page->frame = NULL;
   return victim;
 }
 
@@ -214,10 +216,10 @@ struct frame* vm_get_frame(void) {
       frame->page = NULL;
     }
   }
-  frame->owner_pml4 = thread_current()->pml4;
 
   ASSERT(frame != NULL);
   ASSERT(frame->page == NULL);
+  frame->owner_pml4 = thread_current()->pml4;
   list_push_back(&frame_table, &frame->elem);
   return frame;
 }
@@ -264,8 +266,9 @@ bool vm_try_handle_fault(struct intr_frame* f, void* addr, bool user,
     }
 
     bool result = vm_do_claim_page(page);
+    // false일 경우 디버깅 용이하도록 작업동안은 이렇게 고정(추후 Refac)
     if (!result){
-      return false;
+      return false; // 여기다 break_point걸으면 진짜 치명적 예외터질때만 여기옴
     } else {
       return true;
     }

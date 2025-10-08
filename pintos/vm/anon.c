@@ -66,7 +66,10 @@ static bool anon_swap_in(struct page *page, void *kva) {
   size_t slot_idx = anon_page->slot_idx;
 
   lock_acquire(&swap_lock);
-  if (slot_idx == SIZE_MAX || !bitmap_test(swap_bitmap, slot_idx)) return false;
+  if (slot_idx == SIZE_MAX){
+    return false;
+  }
+  if (!bitmap_test(swap_bitmap, slot_idx)) return false;
 
   for (int i = 0; i < SECTORS_PER_PAGE; i++){
     sector_no = (slot_idx * SECTORS_PER_PAGE) + i;
@@ -76,7 +79,6 @@ static bool anon_swap_in(struct page *page, void *kva) {
   lock_release(&swap_lock);
 
   anon_page->slot_idx = SIZE_MAX;
-  pml4_set_page(page->frame->owner_pml4, page->va, kva, true);
   return true;
 }
 
@@ -99,10 +101,7 @@ static bool anon_swap_out(struct page *page) {
   }
   lock_release(&swap_lock);
 
-  anon_page->slot_idx = -1;
-  pml4_clear_page(page->frame, page->va);
-  page->frame = NULL;
-  //free(page->frame); // 이거 제거하면 evict에서 frame이 사라짐 frame해체는 이거 호출하는 쪽으로 ㄱ
+  anon_page->slot_idx = slot_idx;
   return true;
 }
 
