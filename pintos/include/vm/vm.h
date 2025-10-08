@@ -2,6 +2,7 @@
 #define VM_VM_H
 // #include <hash.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "lib/kernel/hash.h"
 #include "threads/palloc.h"
@@ -122,6 +123,7 @@ bool spt_insert_page(struct supplemental_page_table *spt, struct page *page);
 // ✅
 void spt_remove_page(struct supplemental_page_table *spt, struct page *page);
 
+struct frame* vm_get_frame(void);
 // ❌
 void vm_init(void);
 // ❌

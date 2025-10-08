@@ -13,6 +13,7 @@ args-multiple PASS
 mmap-overlap FAIL
 create-normal PASS
 mmap-misalign PASS
+swap-anon FAIL
 bad-write PASS
 open-twice PASS
 page-shuffle PASS
@@ -80,6 +81,7 @@ mmap-bad-fd3 PASS
 mmap-bad-fd2 PASS
 write-boundary PASS
 wait-killed PASS
+swap-file FAIL
 close-bad-fd PASS
 multi-child-fd PASS
 exit PASS

@@ -5,7 +5,7 @@ struct page;
 enum vm_type;
 
 struct anon_page {
-  // disk_sector_t sec_no;
+  size_t slot_idx;
 };
 
 void vm_anon_init(void);

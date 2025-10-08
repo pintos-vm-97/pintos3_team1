@@ -171,7 +171,7 @@ static struct frame* vm_evict_frame(void) {
  * memory is full, this function evicts the frame to get the available memory
  * space.
  * 프레임을 malloc, kva를 palloc 하고 반환*/
-static struct frame* vm_get_frame(void) {
+struct frame* vm_get_frame(void) {
   struct frame* frame = NULL;
   void* kva = palloc_get_page(PAL_USER | PAL_ZERO);
   if (kva == NULL) {
