@@ -39,8 +39,34 @@ bool file_backed_initializer(struct page* page, enum vm_type type, void* kva) {
 }
 
 /* Swap in the page by read contents from the file. */
+// file swapin은 파일 read - 이거 그냥 copy_loaded_page로직 빌려쓰면될듯?
 static bool file_backed_swap_in(struct page* page, void* kva) {
-  struct file_page* file_page UNUSED = &page->file;
+  enum vm_type type = VM_TYPE(page->operations->type);
+  ASSERT(type == VM_FILE);
+  ASSERT(kva != NULL);
+
+  struct file_page* file_page = &page->file;
+  void* va = page->va;
+
+  // 이거 나중에 모듈화하기
+  struct lazy_load_aux* aux = malloc(sizeof(struct lazy_load_aux));
+  if (aux == NULL) return false;
+  aux->file = file_page->file;
+  aux->page_read_bytes = file_page->page_read_bytes;
+  aux->page_zero_bytes = file_page->page_zero_bytes;
+  aux->ofs = file_page->ofs;
+  aux->is_writable = file_page->is_writable;
+
+  if (!vm_alloc_page_with_initializer(type, va, file_page->is_writable,
+                                      lazy_load_segment, aux)) {
+    free(aux);
+    return false;
+  }
+
+  if (!vm_claim_page(va)) {
+    return false;
+  }
+
   return true;
 }
 

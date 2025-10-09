@@ -404,7 +404,7 @@ static bool copy_loaded_page(struct supplemental_page_table* dst,
   if (dst_page == NULL) return false;
 
   if (type == VM_FILE) {
-    // 나중에 캡슐화하던가
+    // 나중에 모듈화하던가
     struct file_page* dst_fp = &dst_page->file;
     struct file_page* src_fp = &src->file;
     dst_fp->file = file_reopen(src_fp->file);

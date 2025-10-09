@@ -382,10 +382,6 @@ void destruct_hash_elem(struct hash_elem *e, void *aux) {
   ASSERT(e != NULL);
   struct page *page = hash_entry(e, struct page, hash_elem);
   vm_dealloc_page(page);  // 메크로 사용 깔끔
-  // 아래는 어차피 destroy에서 하게 놨두는게 좋나????
-  // if (frame != NULL) {
-  //   dealloc_frame(frame);
-  // }
 }
 /* 해시 요소 E에 대해 해시 값을 계산하여 반환한다.
  * 이때 보조 데이터 AUX를 함께 사용한다. */

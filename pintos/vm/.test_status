@@ -25,6 +25,7 @@ create-long PASS
 mmap-read PASS
 mmap-remove PASS
 fork-close PASS
+alarm-simultaneous PASS
 fork-boundary PASS
 rox-multichild PASS
 create-bound PASS
@@ -33,6 +34,7 @@ pt-bad-read PASS
 page-merge-par PASS
 rox-child PASS
 mmap-write PASS
+alarm-single PASS
 lazy-file PASS
 pt-bad-addr PASS
 read-normal PASS
@@ -93,6 +95,7 @@ args-many PASS
 mmap-clean PASS
 fork-read PASS
 write-zero PASS
+alarm-multiple PASS
 create-exists PASS
 mmap-bad-off PASS
 open-normal PASS
