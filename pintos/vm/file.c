@@ -65,13 +65,12 @@ static bool file_backed_swap_out(struct page* page) {
     dirty_writeback(page);
   }
   // mmap region일 경우도 추가해야 하나? unmap
-  if (page->mmap_region) {
-    do_munmap(page->mmap_region->base_addr);
-  } else {
-    lock_acquire(&file_lock);
-    file_close(f);
-    lock_release(&file_lock);
-  }
+  // todo 이거 바꾸기
+  struct frame* frame = page->frame;
+  ASSERT(frame != NULL);  // 디버그용
+  pml4_clear_page(frame->owner_pml4, page->va);
+  dealloc_frame(frame);
+  page->frame = NULL;
   return true;
 }
 
@@ -84,6 +83,10 @@ static void file_backed_destroy(struct page* page) {
   }
 
   pml4_clear_page(thread_current()->pml4, pg_round_down(page->va));
+  if (page->frame != NULL) {
+    dealloc_frame(page->frame);
+    page->frame = NULL;
+  }
 }
 
 /* Do the mmap */
@@ -154,16 +157,13 @@ static void remove_related_regions(void* base_addr) {
   struct list* mmap_list = &t->mmap_list;
   struct list_elem* e = list_begin(mmap_list);
 
-  for (e = list_begin(mmap_list); e != list_end(mmap_list);){
+  for (e = list_begin(mmap_list); e != list_end(mmap_list);) {
     struct list_elem* next = list_next(e);
     struct mmap_region* region = list_entry(e, struct mmap_region, elem);
     if (region != NULL && region->base_addr == base_addr) {
       struct page* page = spt_find_page(&t->spt, pg_round_down(region->addr));
       if (page != NULL) {
-        struct frame* frame = page->frame;
-        //pml4_clear_page(t->pml4, pg_round_down(page->va));
-        spt_remove_page(&t->spt, page); // 얘가 pml4_clear도 해줌
-        if (frame != NULL) dealloc_frame(frame);
+        spt_remove_page(&t->spt, page);  // 얘가 pml4_clear, frame 해제도 해줌
       }
       list_remove(e);
       free(region);

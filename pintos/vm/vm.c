@@ -180,7 +180,7 @@ static struct frame* vm_evict_frame(void) {
   struct frame* victim UNUSED = vm_get_victim();
   struct page* page = NULL;
 
-  if (victim == NULL){
+  if (victim == NULL) {
     return NULL;
   }
 
@@ -191,9 +191,11 @@ static struct frame* vm_evict_frame(void) {
   if (!swap_out(page)) {
     return NULL;
   }
-  pml4_clear_page(victim->owner_pml4, page->va);
+  // pml4_clear_page(victim->owner_pml4, page->va); 이건 swap out에서 해주는게
+  // 맞나?
   victim->page = NULL;
-  page->frame = NULL;
+  page->frame =
+      NULL;  // SWAP_OUT에서 해주게 설계했지만 한번더 추가해봄 (방어적)
   return victim;
 }
 
@@ -267,8 +269,8 @@ bool vm_try_handle_fault(struct intr_frame* f, void* addr, bool user,
 
     bool result = vm_do_claim_page(page);
     // false일 경우 디버깅 용이하도록 작업동안은 이렇게 고정(추후 Refac)
-    if (!result){
-      return false; // 여기다 break_point걸으면 진짜 치명적 예외터질때만 여기옴
+    if (!result) {
+      return false;  // 여기다 break_point걸으면 진짜 치명적 예외터질때만 여기옴
     } else {
       return true;
     }
@@ -460,6 +462,7 @@ bool supplemental_page_table_copy(struct supplemental_page_table* dst UNUSED,
  */
 void supplemental_page_table_kill(struct supplemental_page_table* spt) {
   ASSERT(spt != NULL);
+  // spt_remove_page
   hash_clear(&spt->page_table,
              destruct_hash_elem);  // 일단 여기서 페이지별 destroy함수 호출 뒤
                                    // page free
