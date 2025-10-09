@@ -1,5 +1,6 @@
 /* file.c: Implementation of memory backed file object (mmaped object). */
 
+#include <string.h>
 #include "vm/vm.h"
 #include "userprog/process.h"
 #include "threads/vaddr.h"
@@ -44,29 +45,15 @@ static bool file_backed_swap_in(struct page* page, void* kva) {
   enum vm_type type = VM_TYPE(page->operations->type);
   ASSERT(type == VM_FILE);
   ASSERT(kva != NULL);
-
   struct file_page* file_page = &page->file;
-  void* va = page->va;
+  ASSERT(file_page->file != NULL);
+  size_t page_read_bytes = file_page->page_read_bytes;
+  size_t page_zero_bytes = file_page->page_zero_bytes;
 
-  // 이거 나중에 모듈화하기
-  struct lazy_load_aux* aux = malloc(sizeof(struct lazy_load_aux));
-  if (aux == NULL) return false;
-  aux->file = file_page->file;
-  aux->page_read_bytes = file_page->page_read_bytes;
-  aux->page_zero_bytes = file_page->page_zero_bytes;
-  aux->ofs = file_page->ofs;
-  aux->is_writable = file_page->is_writable;
-
-  if (!vm_alloc_page_with_initializer(type, va, file_page->is_writable,
-                                      lazy_load_segment, aux)) {
-    free(aux);
-    return false;
-  }
-
-  if (!vm_claim_page(va)) {
-    return false;
-  }
-
+  off_t read_bytes =
+      file_read_at(file_page->file, kva, page_read_bytes, file_page->ofs);
+  ASSERT(read_bytes == page_read_bytes);
+  memset(kva + read_bytes, 0, page_zero_bytes);
   return true;
 }
 
@@ -75,9 +62,11 @@ static bool file_backed_swap_in(struct page* page, void* kva) {
 static bool dirty_writeback(struct page* page) {
   struct file_page* file_page = &page->file;
   lock_acquire(&file_lock);
-  file_write_at(file_page->file, page->frame->kva, file_page->page_read_bytes,
-                file_page->ofs);
+  off_t written_bytes =
+      file_write_at(file_page->file, page->frame->kva,
+                    file_page->page_read_bytes, file_page->ofs);
   lock_release(&file_lock);
+  return written_bytes == file_page->page_read_bytes;
 }
 /**
  * Dirty 확인 필요
@@ -88,14 +77,16 @@ static bool file_backed_swap_out(struct page* page) {
   struct file_page* file_page = &page->file;
   struct file* f = file_page->file;
   if (pml4_is_dirty(thread_current()->pml4, page->va)) {
-    dirty_writeback(page);
+    if (!dirty_writeback(page)) {
+      return false;
+    }
   }
   // mmap region일 경우도 추가해야 하나? unmap
   // todo 이거 바꾸기
   struct frame* frame = page->frame;
   ASSERT(frame != NULL);  // 디버그용
   pml4_clear_page(frame->owner_pml4, page->va);
-  dealloc_frame(frame);
+  // dealloc_frame(frame);
   page->frame = NULL;
   return true;
 }
@@ -105,7 +96,7 @@ static void file_backed_destroy(struct page* page) {
   // dirty여부 파악하고
   struct file_page* file_page UNUSED = &page->file;
   if (pml4_is_dirty(thread_current()->pml4, page->va)) {
-    dirty_writeback(page);
+    if (!dirty_writeback(page)) return false;
   }
 
   pml4_clear_page(thread_current()->pml4, pg_round_down(page->va));

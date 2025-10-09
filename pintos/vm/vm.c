@@ -254,6 +254,8 @@ bool vm_try_handle_fault(struct intr_frame* f, void* addr, bool user,
                          bool write, bool not_present) {
   /* addr 없거나 유저영역주소가 아니거나 PTE 존재하는 경우 false*/
   // stack성장 넣으면서 코드 길어질 것 같아서 if문 합침
+  if (!is_user_vaddr(addr)) return false;
+
   if (addr == NULL || !is_user_vaddr(addr) || !not_present) return false;
 
   struct supplemental_page_table* spt = &thread_current()->spt;
