@@ -75,18 +75,21 @@ static bool dirty_writeback(struct page* page) {
  */
 static bool file_backed_swap_out(struct page* page) {
   struct file_page* file_page = &page->file;
-  struct file* f = file_page->file;
-  if (pml4_is_dirty(thread_current()->pml4, page->va)) {
+  struct frame* frame = page->frame;
+  void* va = page->va;
+  if (frame == NULL) return false;
+
+  uint64_t* owner_pml4 = frame->owner_pml4;
+
+  if (pml4_is_dirty(owner_pml4, va)) {
     if (!dirty_writeback(page)) {
       return false;
     }
+    pml4_set_dirty(owner_pml4, va, false);
   }
-  // mmap region일 경우도 추가해야 하나? unmap
-  // todo 이거 바꾸기
-  struct frame* frame = page->frame;
-  ASSERT(frame != NULL);  // 디버그용
-  pml4_clear_page(frame->owner_pml4, page->va);
-  // dealloc_frame(frame);
+
+  pml4_clear_page(frame->owner_pml4, va);
+  frame->page = NULL;
   page->frame = NULL;
   return true;
 }
@@ -97,6 +100,7 @@ static void file_backed_destroy(struct page* page) {
   struct file_page* file_page UNUSED = &page->file;
   if (pml4_is_dirty(thread_current()->pml4, page->va)) {
     if (!dirty_writeback(page)) return false;
+    pml4_set_dirty(thread_current()->pml4, page->va, false);
   }
 
   pml4_clear_page(thread_current()->pml4, pg_round_down(page->va));

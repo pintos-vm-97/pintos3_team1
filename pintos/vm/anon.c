@@ -62,11 +62,10 @@ bool anon_initializer(struct page *page, enum vm_type type, void *kva) {
 static bool anon_swap_in(struct page *page, void *kva) {
   struct anon_page *anon_page = &page->anon;
   disk_sector_t sector_no = NULL;
-  struct frame *f = NULL;
   size_t slot_idx = anon_page->slot_idx;
 
   lock_acquire(&swap_lock);
-  if (slot_idx == SIZE_MAX) {
+  if (slot_idx > max_bitmap_idx) {
     return false;
   }
   if (!bitmap_test(swap_bitmap, slot_idx)) return false;
@@ -78,6 +77,7 @@ static bool anon_swap_in(struct page *page, void *kva) {
   bitmap_set(swap_bitmap, slot_idx, false);
   lock_release(&swap_lock);
 
+  pml4_set_page(thread_current()->pml4, page->va, page->frame->kva, true);
   anon_page->slot_idx = SIZE_MAX;
   return true;
 }
@@ -90,7 +90,10 @@ static bool anon_swap_in(struct page *page, void *kva) {
  */
 static bool anon_swap_out(struct page *page) {
   struct anon_page *anon_page = &page->anon;
-  void *kva = page->frame->kva;
+  struct frame *frame = page->frame;
+  if (frame == NULL) return false;
+
+  void *kva = frame->kva;
   lock_acquire(&swap_lock);
   size_t slot_idx =
       bitmap_scan_and_flip(swap_bitmap, 0, 1, false);  // false 는 빈거
@@ -102,6 +105,7 @@ static bool anon_swap_out(struct page *page) {
   }
   lock_release(&swap_lock);
 
+  pml4_clear_page(frame->owner_pml4, page->va);
   anon_page->slot_idx = slot_idx;
   return true;
 }

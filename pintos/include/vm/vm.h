@@ -75,13 +75,13 @@ struct frame {
   void *kva;
   struct page *page;
   struct list_elem elem;
-  uint64_t *owner_pml4
+  uint64_t *owner_pml4;
 };
 
 struct mmap_region {
   struct file *file;
   void *base_addr;
-  int total_mapped_cnt; // 이 mapped포함 같이 섞인 애들 cnt(리스트 적게 돌려고)
+  int total_mapped_cnt;  // 이 mapped포함 같이 섞인 애들 cnt(리스트 적게 돌려고)
   void *addr;
   struct list_elem elem;  // mmap list 소속 elem
 };
@@ -124,7 +124,7 @@ bool spt_insert_page(struct supplemental_page_table *spt, struct page *page);
 // ✅
 void spt_remove_page(struct supplemental_page_table *spt, struct page *page);
 
-struct frame* vm_get_frame(void);
+struct frame *vm_get_frame(void);
 // ❌
 void vm_init(void);
 // ❌

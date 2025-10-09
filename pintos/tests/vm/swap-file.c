@@ -25,12 +25,12 @@ void test_main(void) {
         "mmap \"large.txt\"");
 
   /* Check that data is correct. */
-  CHECK(handle = handle, "여기는 아니지?");
+  // CHECK(handle = handle, "여기는 아니지?");
   if (memcmp(actual, large, strlen(large)))
     fail("read of mmap'd file reported bad data");
 
   /* Verify that data is followed by zeros. */
-  CHECK(handle = handle, "strlen시작");
+  // CHECK(handle = handle, "strlen시작");
   size_t len = strlen(large);
   size_t page_end;
   for (page_end = 0; page_end < len; page_end += 4096);
