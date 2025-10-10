@@ -40,8 +40,9 @@ void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
 void usr_address_vali(const void *addr);
 bool copy_user_string(char *dst, const char *src, size_t max_len);
+bool copy_user_string_for_read(char *dst, const char *src, size_t max_len);
 bool check_page(const void *user_addr);
-void vali_pointer(const void *user_addr, size_t size);
+void not_map_vali_ptr(const void *user_addr, size_t size);
 void vali_string(const char *str);
 
 /* System call.
@@ -307,7 +308,8 @@ void syscall_close(int fd) {
 }
 
 int syscall_write(int fd, const void *buffer, unsigned size) {
-  vali_pointer(buffer, size);  // 사용자 버퍼가 유효한 커널 접근 범위인지 확인
+  not_map_vali_ptr(buffer,
+                   size);  // 사용자 버퍼가 유효한 커널 접근 범위인지 확인
 
   struct thread *current = thread_current();  // 현재 스레드 포인터 확보
   struct file *file = process_get_file(fd);   // fd에 대응되는 파일 객체 조회
@@ -336,20 +338,22 @@ int syscall_write(int fd, const void *buffer, unsigned size) {
     return -1;  // 열려 있지 않은 fd이므로 실패
   }
 
+  // 커널영역 복사
+  void *kbuf = palloc_get_page(PAL_ZERO);
+  copy_user_string(kbuf, buffer, size);
   lock_acquire(&filesys_lock);  // 파일 시스템 접근 보호를 위해 락 획득
-  int bytes_write = file_write(file, buffer, size);  // 파일에 데이터 쓰기 수행
-  lock_release(&filesys_lock);                       // 파일 연산 후 락 해제
+  int bytes_write = file_write(file, kbuf, size);  // 파일에 데이터 쓰기 수행
+  lock_release(&filesys_lock);                     // 파일 연산 후 락 해제
 
   if (bytes_write < 0) {
     return -1;  // 쓰기가 실패했다면 오류 반환
   }
-
+  palloc_free_page(kbuf);
   return bytes_write;  // 실제로 기록한 바이트 수 반환
 }
 
 int syscall_read(int fd, void *buffer, unsigned size) {
-  vali_pointer(buffer, size);  // 사용자 버퍼가 커널에서 접근 가능한지 확인
-  printf("안와?");
+  not_map_vali_ptr(buffer, size);  // 사용자 버퍼가 커널에서 접근 가능한지 확인
   struct thread *current = thread_current();  // 현재 스레드 포인터 확보
   struct file *file = process_get_file(fd);   // fd에 연결된 파일 객체 조회
   struct file *stdin_file =
@@ -378,11 +382,16 @@ int syscall_read(int fd, void *buffer, unsigned size) {
   if (file == NULL) {
     return -1;  // 열려 있지 않은 fd라면 실패
   }
+  // 커널영역 복사
+  void *kbuf = palloc_get_page(PAL_ZERO);
 
   lock_acquire(&filesys_lock);  // 파일 시스템 접근 보호를 위해 락 획득
-  int bytes_read = file_read(file, buffer, size);  // 파일에서 데이터 읽어오기
-  lock_release(&filesys_lock);                     // 파일 연산 후 락 해제
+  int bytes_read = file_read(file, kbuf, size);  // 파일에서 데이터 읽어오기
+  lock_release(&filesys_lock);                   // 파일 연산 후 락 해제
 
+  if (bytes_read > 0) copy_user_string_for_read(buffer, kbuf, bytes_read);
+  // 해제
+  palloc_free_page(kbuf);
   return bytes_read;  // 실제로 읽은 바이트 수 반환
 }
 
@@ -437,55 +446,15 @@ int syscall_open(const char *file_name) {
    → 사용 예: exec("..."), open("...") 등에서 문자열 인자 검증 */
 void vali_string(const char *str) {
   for (const char *p = str;; p++) {
-    vali_pointer(p, 1);  // 현재 문자가 존재하는 1바이트 주소가 유효한지 확인
+    not_map_vali_ptr(p,
+                     1);  // 현재 문자가 존재하는 1바이트 주소가 유효한지 확인
     if (*p == '\0') {
       break;  // 문자열 끝(널 문자)에 도달하면 검사 종료
     }
   }
 }
 
-/* 사용자 포인터 user_addr로부터 size 바이트까지의 주소 범위를
-   페이지 단위로 하나씩 순회하며 모두 접근 가능한지 확인
-   → 접근 불가능한 주소가 포함되어 있으면 프로세스를 종료함 (syscall_exit(-1))
-   → 사용 예: read(), write(), exec() 등에서 전달받은 사용자 버퍼 검증 */
-void vali_pointer(const void *user_addr, size_t size) {
-  if (size == 0) {
-    return;  // 검사할 바이트 수가 0이면 return
-  }
-
-  const uint8_t *check_ptr = user_addr;  // 현재 검사할 위치 (byte 단위 포인터)
-  size_t byte_left = size;               // 검사해야 할 남은 바이트 수
-
-  // 검사할 전체 영역을 페이지 단위로 나누어 한 페이지씩 접근 가능 여부를 확인
-  while (byte_left > 0) {
-    // 현재 check_ptr 포인터가 가리키는 주소가 사용자 영역에 있고
-    // 실제로 물리 메모리에 매핑되어 있는지 확인
-    if (!check_page(check_ptr)) {
-      syscall_exit(-1);  // 잘못된 주소일 경우, 즉시 프로세스 종료
-    }
-
-    // 현재 페이지에서 끝까지 남은 바이트 수 계산
-    /* pg_ofs() - 예를 들어, 페이지 크기가 4KB라면, 0~4095 바이트 범위 안에서
-     * 어느 지점에 데이터가 있는지를 나타내는 값이 offset입니다 */
-    size_t page_left = PGSIZE - pg_ofs(check_ptr);
-
-    // 남은 전체 바이트와 현재 페이지에서 가능한 바이트 중 더 작은 만큼만 이동
-    size_t chunk = byte_left < page_left ? byte_left : page_left;
-
-    check_ptr += chunk;  // 검사할 포인터를 다음 영역으로 이동
-    byte_left -= chunk;  // 검사해야 할 남은 바이트 수 갱신
-  }
-}
-
-/* 내부 헬퍼: 단일 가상 주소 user_addr이
-   - NULL이 아니고
-   - 사용자 영역에 속하며
-   - 현재 프로세스의 페이지 테이블에 매핑되어 있는지 확인 */
-bool check_page(const void *user_addr) {
-  return user_addr != NULL && is_user_vaddr(user_addr) &&
-         pml4_get_page(thread_current()->pml4, user_addr) != NULL;
-}
-
+// 매핑이 안되어있는게 정상.
 /* 파일을 삭제하는 시스템콜 핸들러 */
 bool syscall_remove(const char *file) {
   // 사용자 포인터 유효성 검사 (커널 주소/NULL/미매핑 주소 거부)
@@ -498,20 +467,13 @@ bool syscall_remove(const char *file) {
 bool syscall_create(const char *file, unsigned initial_size) {
   // 사용자 포인터 유효성 검사 (커널 주소/NULL/미매핑 주소 거부)
   usr_address_vali(file);
-  // 파일 시스템에 새 파일 생성 (초기 크기 지정), 성공 여부 반환 (boolean)
-  return filesys_create(file, initial_size);
-}
 
-/* 사용자 주소 유효성 검증 유틸리티 */
-void usr_address_vali(const void *addr) {
-  // 다음 중 하나라도 해당하면 프로세스를 종료(-1)
-  // - 커널 주소 공간(is_kernel_vaddr)
-  // - NULL 포인터
-  // - 현재 프로세스의 페이지테이블(pml4)에 매핑되지 않은 주소
-  if (is_kernel_vaddr(addr) || addr == NULL ||
-      pml4_get_page(thread_current()->pml4, addr) == NULL) {
-    syscall_exit(-1);  // 잘못된 사용자 포인터는 즉시 종료
+  // 파일 시스템에 새 파일 생성 (초기 크기 지정), 성공 여부 반환 (boolean)
+  bool isSucc = filesys_create(file, initial_size);
+  if (!isSucc) {
+    return false;
   }
+  return true;
 }
 
 pid_t syscall_fork(const char *name, struct intr_frame *f) {
@@ -553,7 +515,32 @@ int syscall_exec(const char *cmd_line) {
   NOT_REACHED();
 }
 
-bool copy_user_string(char *dst, const char *src, size_t max_len) {
+/* 프로세스 종료 시스템콜 핸들러 */
+void syscall_exit(int status) {
+  struct thread *current_thread = thread_current();
+  current_thread->exit_status = status;
+  printf("%s: exit(%d)\n", current_thread->name, status);
+  thread_exit();
+}
+
+/* 전원 종료(Pintos/QEMU 종료) 시스템콜 핸들러 */
+void syscall_halt(void) {
+  // 전원 끄기: Pintos/QEMU 종료
+  power_off();
+}
+
+/* 사용자 주소 유효성 검증 유틸리티 */
+void usr_address_vali(const void *addr) {
+  // 다음 중 하나라도 해당하면 프로세스를 종료(-1)
+  // - 커널 주소 공간(is_kernel_vaddr)
+  // - NULL 포인터
+  // - 현재 프로세스의 페이지테이블(pml4)에 매핑되지 않은 주소
+  if (addr == NULL || !is_user_vaddr(addr) ||
+      pml4_get_page(thread_current()->pml4, addr) == NULL) {
+    syscall_exit(-1);  // 잘못된 사용자 포인터는 즉시 종료
+  }
+}
+bool copy_user_string_for_read(char *dst, const char *src, size_t max_len) {
   for (size_t i = 0; i < max_len; i++) {
     /* 매 바이트 접근 전에 해당 주소가 사용자 영역인지 검사한다. */
     usr_address_vali(src + i);
@@ -568,16 +555,59 @@ bool copy_user_string(char *dst, const char *src, size_t max_len) {
   return false;
 }
 
-/* 프로세스 종료 시스템콜 핸들러 */
-void syscall_exit(int status) {
-  struct thread *current_thread = thread_current();
-  current_thread->exit_status = status;
-  printf("%s: exit(%d)\n", current_thread->name, status);
-  thread_exit();
+bool copy_user_string(char *dst, const char *src, size_t max_len) {
+  for (size_t i = 0; i < max_len; i++) {
+    /* 매 바이트 접근 전에 해당 주소가 사용자 영역인지 검사한다. */
+    // usr_address_vali(src + i);
+    char c = src[i];
+    dst[i] = c;
+    /* NULL 문자를 만났다면 복사가 완료된 것. */
+    if (c == '\0') {
+      return true;
+    }
+  }
+  /* 문자열이 최대 허용 길이 안에서 끝나지 않았음. */
+  return false;
 }
 
-/* 전원 종료(Pintos/QEMU 종료) 시스템콜 핸들러 */
-void syscall_halt(void) {
-  // 전원 끄기: Pintos/QEMU 종료
-  power_off();
+/* 내부 헬퍼: 단일 가상 주소 user_addr이
+   - NULL이 아니고
+   - 사용자 영역에 속하며
+   - 현재 프로세스의 페이지 테이블에 매핑되어 있는지 확인 */
+bool check_page(const void *user_addr) {
+  return user_addr != NULL && is_user_vaddr(user_addr);
+  // pml4_get_page(thread_current()->pml4, user_addr) != NULL
+}
+
+/* 사용자 포인터 user_addr로부터 size 바이트까지의 주소 범위를
+   페이지 단위로 하나씩 순회하며 모두 접근 가능한지 확인
+   → 접근 불가능한 주소가 포함되어 있으면 프로세스를 종료함 (syscall_exit(-1))
+   → 사용 예: read(), write(), exec() 등에서 전달받은 사용자 버퍼 검증 */
+void not_map_vali_ptr(const void *user_addr, size_t size) {
+  if (size == 0) {
+    return;  // 검사할 바이트 수가 0이면 return
+  }
+
+  const uint8_t *check_ptr = user_addr;  // 현재 검사할 위치 (byte 단위 포인터)
+  size_t byte_left = size;               // 검사해야 할 남은 바이트 수
+
+  // 검사할 전체 영역을 페이지 단위로 나누어 한 페이지씩 접근 가능 여부를 확인
+  while (byte_left > 0) {
+    // 현재 check_ptr 포인터가 가리키는 주소가 사용자 영역에 있고
+    // 실제로 물리 메모리에 매핑되어 있는지 확인
+    if (!check_page(check_ptr)) {
+      syscall_exit(-1);  // 잘못된 주소일 경우, 즉시 프로세스 종료
+    }
+
+    // 현재 페이지에서 끝까지 남은 바이트 수 계산
+    /* pg_ofs() - 예를 들어, 페이지 크기가 4KB라면, 0~4095 바이트 범위 안에서
+     * 어느 지점에 데이터가 있는지를 나타내는 값이 offset입니다 */
+    size_t page_left = PGSIZE - pg_ofs(check_ptr);
+
+    // 남은 전체 바이트와 현재 페이지에서 가능한 바이트 중 더 작은 만큼만 이동
+    size_t chunk = byte_left < page_left ? byte_left : page_left;
+
+    check_ptr += chunk;  // 검사할 포인터를 다음 영역으로 이동
+    byte_left -= chunk;  // 검사해야 할 남은 바이트 수 갱신
+  }
 }
