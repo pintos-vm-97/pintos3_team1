@@ -5,8 +5,7 @@
 #include <round.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-
+#include "vm/vm.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -351,18 +350,18 @@ static void __do_fork(void *aux) {
 
   /* 새 스레드가 사용할 FDT, FD 인덱스 등 기본 자료구조를 초기화한다. */
   process_init();
-  struct file *stdin_file = syscall_get_std_file(
-      STDIN_FILENO);  // 부모와 동일한 STDIN 더미 포인터 캐싱
-  struct file *stdout_file = syscall_get_std_file(
-      STDOUT_FILENO);  // 부모와 동일한 STDOUT 더미 포인터 캐싱
+  // 부모와 동일한 STDIN 더미 포인터 캐싱
+  struct file *stdin_file = syscall_get_std_file(STDIN_FILENO);
+  // 부모와 동일한 STDOUT 더미 포인터 캐싱
+  struct file *stdout_file = syscall_get_std_file(STDOUT_FILENO);
+  // 부모 상태를 그대로 채우기 위해 자식 FDT를 먼저 비워 둠
   for (int fd = 0; fd < MAX_FD; fd++) {
-    current->FDT[fd] =
-        NULL;  // 부모 상태를 그대로 채우기 위해 자식 FDT를 먼저 비워 둠
+    current->FDT[fd] = NULL;
   }
-  current->stdin_count =
-      0;  // 부모 복사를 통해 실제 STDIN 참조 개수를 다시 계산할 예정
-  current->stdout_count =
-      0;  // 부모 복사를 통해 실제 STDOUT 참조 개수를 다시 계산할 예정
+  // 부모 복사를 통해 실제 STDIN 참조 개수를 다시 계산할 예정
+  current->stdin_count = 0;
+  // 부모 복사를 통해 실제 STDOUT 참조 개수를 다시 계산할 예정
+  current->stdout_count = 0;
 
   /* 부모가 fork 시스템 콜을 호출하던 시점의 레지스터 값을 자식 intr_frame에
    * 그대로 복사한다. */
@@ -380,17 +379,13 @@ static void __do_fork(void *aux) {
 #ifdef VM
   /* 새로 만든 pml4를 활성화한 뒤, VM 기능 사용 시 부모의 SPT 엔트리를
    * 순회하면서 lazy load 정보까지 복사한다. */
-#else
-  /* VM 기능이 없다면 부모의 pml4를 직접 순회해 사용자 페이지를 새로 할당하고
-   * 내용을 복제한다. */
-#endif
-#ifdef VM
   if (!supplemental_page_table_copy(&current->spt, &parent->spt)) {
     succ = false;
     goto done;
   }
 #else
-  /* VM 미사용 시 부모의 PTE를 순회하며 자식 페이지를 만들어 붙인다. */
+  /* VM 기능이 없다면 부모의 pml4를 직접 순회해 사용자 페이지를 새로 할당하고
+   * 내용을 복제한다. */
   if (!pml4_for_each(parent->pml4, duplicate_pte, parent)) {
     succ = false;
     goto done;

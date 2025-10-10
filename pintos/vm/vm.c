@@ -289,7 +289,13 @@ void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
 
 /* Copy supplemental page table from src to dst */
 bool supplemental_page_table_copy(struct supplemental_page_table *dst,
-                                  struct supplemental_page_table *src) {}
+                                  struct supplemental_page_table *src) {
+  /*
+  여기서 해야하는 것
+  spt 전부 복사 '만' 하기
+  hash_first, hash_next 쓰면됨
+  */
+}
 
 /* Free the resource hold by the supplemental page table */
 void supplemental_page_table_kill(struct supplemental_page_table *spt) {

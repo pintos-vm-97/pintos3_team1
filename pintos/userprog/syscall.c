@@ -3,6 +3,7 @@
 #include <debug.h>
 #include <stdio.h>
 #include <syscall-nr.h>
+#include "string.h"
 
 #include "devices/input.h"
 #include "filesys/directory.h"  // 디렉터리 관련 자료구조 및 함수 (디렉터리 열기, 탐색 등)
@@ -463,7 +464,16 @@ bool syscall_create(const char *file, unsigned initial_size) {
 pid_t syscall_fork(const char *name, struct intr_frame *f) {
   // 사용자 영역 포인터인지, 유효한 페이지에 매핑되어 있는지 선행 검사
   usr_address_vali(name);
-  tid_t child = process_fork(name, f);
+
+  void *kbuf = palloc_get_page(PAL_ZERO);
+  if (kbuf == NULL) syscall_exit(-1);
+
+  copy_user_string_for_read(kbuf, name, PGSIZE);
+
+  tid_t child = process_fork(kbuf, f);
+
+  palloc_free_page(kbuf);
+
   // thread_create 실패 시 TID_ERROR가 내려오므로 PID_ERROR로 변환해 반환
   return child == TID_ERROR ? PID_ERROR : child;
 }
