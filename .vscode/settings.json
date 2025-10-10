@@ -69,7 +69,8 @@
     "file.h": "c",
     "anon.h": "c",
     "inttypes.h": "c",
-    "main.h": "c"
+    "main.h": "c",
+    "loader.h": "c"
   },
   /* 포맷팅 설정 */
   "editor.formatOnSave": true,

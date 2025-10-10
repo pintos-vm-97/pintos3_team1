@@ -7,6 +7,10 @@
 // 추가한부분
 #include "threads/vaddr.h"
 #include "threads/mmu.h"
+#include "userprog/process.h"  // setup_stack
+
+static bool valid_stack_growth(struct intr_frame *f, void *addr);
+static bool vm_stack_growth(void *addr);
 struct list frame_list;
 struct lock frame_lock;
 
@@ -180,13 +184,28 @@ static struct frame *vm_get_frame(void) {
 }
 
 /* Growing the stack. */
-static void vm_stack_growth(void *addr UNUSED) {}
+static bool vm_stack_growth(void *addr) {
+  struct thread *t = thread_current();
+  void *stack_bottom = (void *)t->stack_bottom;
+  void *ksp = pg_round_down(addr);
+  // 익명 페이지를 만들어서 성장시켜라
+  // 1. 이 주소에 대해서 익명으로 할당하고 매핑
+  while (stack_bottom > ksp) {
+    stack_bottom = (void *)(((uint8_t *)stack_bottom) - PGSIZE);
+    if (!vm_alloc_page_with_initializer(VM_MARKER_0 | VM_ANON, stack_bottom,
+                                        true, NULL, NULL))
+      return false;
+
+    if (!vm_claim_page(stack_bottom)) return false;
+  }
+  t->stack_bottom = stack_bottom;
+  return true;
+}
 
 /* Handle the fault on write_protected page */
 static bool vm_handle_wp(struct page *page UNUSED) {}
 
-/* Return true on success */
-bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr, bool user,
+bool vm_try_handle_fault(struct intr_frame *f, void *addr, bool user,
                          bool write, bool not_present) {
   /* addr 없으면 false*/
   if (addr == NULL) return false;
@@ -195,16 +214,24 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr, bool user,
   /* PTE가 있는데 들어왔다면 false */
   if (!not_present) return false;
 
-  struct supplemental_page_table *spt = &thread_current()->spt;
-  struct page *page = NULL;
-  page = spt_find_page(spt, addr);
+  struct thread *t = thread_current();
+  struct supplemental_page_table *spt = &t->spt;
 
-  /* page가 없으면 false */
-  if (page == NULL) return false;
-  /* writable은 false인데 write가 true로 오면 false*/
-  if (!page->writable && write) return false;
+  // 1. 매핑된 페이지가 있다면  그걸 스왑인
+  struct page *page = spt_find_page(spt, addr);
+  if (page != NULL) return vm_do_claim_page(page);
 
-  return vm_do_claim_page(page);
+  // 2. 없으면 “스택 확장 조건”을 검사
+  if (valid_stack_growth(f, addr)) return vm_stack_growth(addr);
+
+  // 3. 그 외는 fault 처리 불가
+  return false;
+}
+
+static bool valid_stack_growth(struct intr_frame *f, void *addr) {
+  // 최상단과 최하단사이
+  return (addr >= f->rsp - 32 && addr < USER_STACK &&
+          addr >= USER_STACK - (1 << 20));
 }
 
 /* Free the page.

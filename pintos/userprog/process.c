@@ -1148,7 +1148,8 @@ static bool setup_stack(struct intr_frame *if_) {
     if_->rsp = USER_STACK;
     success = true;
   }
-
+  /* 새로운 스택최하단 */
+  cur->stack_bottom = stack_bottom;
   return success;
 }
 #endif /* VM */

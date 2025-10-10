@@ -52,7 +52,7 @@ lazy-file FAIL
 pt-bad-addr PASS
 read-normal FAIL
 lazy-anon PASS
-pt-write-code2 FAIL
+pt-write-code2 PASS
 mmap-over-stk FAIL
 priority-donate-multiple2 PASS
 open-empty PASS
@@ -92,7 +92,7 @@ sm-random PASS
 alarm-zero PASS
 open-boundary PASS
 create-null PASS
-pt-grow-stack FAIL
+pt-grow-stack PASS
 fork-recursive FAIL
 open-bad-ptr PASS
 mmap-inherit FAIL
@@ -114,7 +114,7 @@ close-bad-fd PASS
 alarm-negative PASS
 multi-child-fd FAIL
 exit PASS
-write-bad-ptr PASS
+write-bad-ptr FAIL
 priority-donate-sema PASS
 lg-seq-block PASS
 mmap-shuffle FAIL
@@ -129,7 +129,7 @@ create-exists PASS
 mmap-bad-off FAIL
 open-normal PASS
 bad-jump PASS
-pt-big-stk-obj FAIL
+pt-big-stk-obj PASS
 bad-jump2 PASS
 open-missing PASS
 create-empty PASS

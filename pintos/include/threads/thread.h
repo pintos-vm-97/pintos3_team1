@@ -22,7 +22,7 @@ enum thread_status {
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;
-#define TID_ERROR ((tid_t)-1) /* Error value for tid_t. */
+#define TID_ERROR ((tid_t) - 1) /* Error value for tid_t. */
 
 /* Thread priorities. */
 #define PRI_MIN 0      /* Lowest priority. */
@@ -34,7 +34,7 @@ typedef int tid_t;
 #define LOAD_AVG_DEFAULT 0
 
 // FDT
-#define FDT_PAGES 1  // 프로세스 FDT 초기화 시 할당할 페이지
+#define FDT_PAGES 1                    // 프로세스 FDT 초기화 시 할당할 페이지
 #define MAX_FD (FDT_PAGES * (1 << 9))  // 최대 FD 개수 (전체 범위 순회 시 사용)
 
 /* A kernel thread or user process.
@@ -127,7 +127,7 @@ struct thread {
   struct semaphore
       exit_sema;  // 자식 종료 시 자식의 부모 wait 마무리 대기용 세마포어
   struct semaphore fork_sema;  // 자식 프로세스 초기화 대기용 세마포어
-  int fork_status;  // fork 초기화 성공 여부 (0:성공, -1:실패)
+  int fork_status;             // fork 초기화 성공 여부 (0:성공, -1:실패)
 
   struct list children;         // 자식 프로세스 리스트
   struct list_elem child_elem;  // 부모의 children 리스트에 들어갈 element
@@ -145,6 +145,7 @@ struct thread {
 #ifdef VM
   /* Table for whole virtual memory owned by thread. */
   struct supplemental_page_table spt;
+  void *stack_bottom;
 #endif
 
   /* Owned by thread.c. */
