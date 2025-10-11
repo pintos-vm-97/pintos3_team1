@@ -8,6 +8,7 @@
 #include "threads/vaddr.h"
 #include "threads/mmu.h"
 #include "userprog/process.h"  // setup_stack
+#include "string.h"
 
 static bool valid_stack_growth(struct intr_frame *f, void *addr);
 static bool vm_stack_growth(void *addr);
@@ -248,19 +249,14 @@ void vm_dealloc_page(struct page *page) {
 bool vm_claim_page(void *va) {
   struct page *page = NULL;
 
-  if (va == NULL || is_kernel_vaddr(va)) {
-    return false;
-  }
+  if (va == NULL || is_kernel_vaddr(va)) return false;
+
   // spt를 넣어야함.
   page = spt_find_page(&thread_current()->spt, va);
-  if (page == NULL) {
-    return false;
-  }
+  if (page == NULL) return false;
 
   bool is_success = vm_do_claim_page(page);  // 페이지에 프레임 할당
-  if (!is_success) {
-    free(page);
-  }
+  if (!is_success) free(page);
 
   return is_success;
 }
@@ -288,13 +284,80 @@ void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
 }
 
 /* Copy supplemental page table from src to dst */
+/* Copy supplemental page table from src to dst */
 bool supplemental_page_table_copy(struct supplemental_page_table *dst,
                                   struct supplemental_page_table *src) {
-  /*
-  여기서 해야하는 것
-  spt 전부 복사 '만' 하기
-  hash_first, hash_next 쓰면됨
-  */
+  struct hash_iterator i;
+  hash_first(&i, &src->page_table);
+
+  while (hash_next(&i)) {
+    struct page *parent_page = hash_entry(hash_cur(&i), struct page, hash_elem);
+    enum vm_type t = VM_TYPE(parent_page->operations->type);
+
+    void *pva = parent_page->va;
+    bool p_wrt = parent_page->writable;
+
+    switch (t) {
+      case VM_UNINIT:
+
+        struct lazy_load_aux *p_aux = parent_page->uninit.aux;
+        struct lazy_load_aux *c_aux = malloc(sizeof(struct lazy_load_aux));
+
+        vm_initializer *init_fn = parent_page->uninit.init;
+        if (!c_aux) return false;
+        *c_aux = (struct lazy_load_aux){
+            .file = file_reopen(p_aux->file),
+            .ofs = p_aux->ofs,
+            .page_read_bytes = p_aux->page_read_bytes,
+            .page_zero_bytes = p_aux->page_zero_bytes,
+        };
+
+        if (!vm_alloc_page_with_initializer(page_get_type(parent_page), pva,
+                                            p_wrt, init_fn, c_aux)) {
+          file_close(c_aux->file);
+          free(c_aux);
+          return false;
+        }
+        break;
+
+      case VM_ANON:
+      case VM_FILE:
+        // 여기서 페이지새로 만들고, 새 프레임할당.
+        if (!(vm_alloc_page(t, pva, p_wrt) && vm_claim_page(pva))) {
+          return false;
+        }
+
+        struct page *c_page = spt_find_page(dst, pva);
+        if (!c_page) return false;
+
+        memcpy(c_page->frame->kva, parent_page->frame->kva, PGSIZE);
+        break;
+      default:
+        return false;
+        break;
+    }
+  }
+  return true;
+
+  // *page = (struct page){
+  //     .operations = &uninit_ops,  // 일단 uninit 전용 operatoins 연결
+  //     .va = va,                   // 페이지가 담당할 사용자 가상주소
+  //     .frame = NULL,              // 실제 프레임은 NULL
+  //     .uninit = (struct uninit_page){
+  //         .init =
+  //             init,  // lazy-load 때 실제 내용을 채울
+  //             함수(vm_initializer같은..)
+  //         .type = type,  // 최종 타입힌트 (anon, file)
+  //         .aux = aux,    // init에 전달할 부가정보
+  //         .page_initializer =
+  //             initializer,  // uninit->실제타입으로 변환시키는 함수
+  //     }};
+
+  // struct lazy_load_aux *aux = malloc(sizeof(struct lazy_load_aux));
+  //   aux->file = file;
+  //   aux->page_read_bytes = page_read_bytes;
+  //   aux->page_zero_bytes = page_zero_bytes;
+  //   aux->ofs = ofs;
 }
 
 /* Free the resource hold by the supplemental page table */
