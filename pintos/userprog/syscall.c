@@ -36,15 +36,14 @@ struct lock filesys_lock;  // 파일 시스템 동기화용 전역 락
 
 static struct file stdin_dummy;   // STDIN을 나타내기 위한 더미 file 구조체
 static struct file stdout_dummy;  // STDOUT을 나타내기 위한 더미 file 구조체
+static bool is_user_mapped(const void *u_addr);
+static bool only_user_addr(const void *u_addr);
+static bool check_user_buffer(void *buffer, size_t size, bool to_read);
+static void copy_in(void *dst, const void *src, size_t size);
+static bool copy_in_string(void *k_addr, const char *user_str);
 
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
-void usr_address_vali(const void *addr);
-bool copy_user_string(char *dst, const char *src, size_t max_len);
-bool copy_user_string_for_read(char *dst, const char *src, size_t max_len);
-bool check_page(const void *user_addr);
-void not_map_vali_ptr(const void *user_addr, size_t size);
-void vali_string(const char *str);
 
 /* System call.
  *
@@ -99,9 +98,8 @@ void syscall_handler(struct intr_frame *f) {
       f->R.rax = syscall_wait((int)f->R.rdi);
       break;
     case SYS_CREATE:
-      f->R.rax =
-          syscall_create((const char *)f->R.rdi,
-                         (unsigned)f->R.rsi);  // 인자 1 : 파일, 인자 2 : 사이즈
+      // 인자 1 : 파일, 인자 2 : 사이즈
+      f->R.rax = syscall_create((const char *)f->R.rdi, (unsigned)f->R.rsi);
       break;
     case SYS_REMOVE:
       f->R.rax = syscall_remove((const char *)f->R.rdi);
@@ -133,10 +131,8 @@ void syscall_handler(struct intr_frame *f) {
       syscall_close((int)f->R.rdi);
       break;
     case SYS_DUP2:
-      f->R.rax = syscall_dup2(
-          (int)f->R.rdi,
-          (int)f->R
-              .rsi);  // dup2(oldfd, newfd) 요청을 처리하고 반환값을 rax에 기록
+      // dup2(oldfd, newfd) 요청을 처리하고 반환값을 rax에 기록
+      f->R.rax = syscall_dup2((int)f->R.rdi, (int)f->R.rsi);
       break;
     default:
       printf("system call!\n");
@@ -293,58 +289,56 @@ void syscall_close(int fd) {
 }
 
 int syscall_write(int fd, const void *buffer, unsigned size) {
-  not_map_vali_ptr(buffer,
-                   size);  // 사용자 버퍼가 유효한 커널 접근 범위인지 확인
+  // 사용자 버퍼가 유효한 커널 접근 범위인지 확인
+  check_user_buffer(buffer, size, true);
 
   struct thread *current = thread_current();  // 현재 스레드 포인터 확보
   struct file *file = process_get_file(fd);   // fd에 대응되는 파일 객체 조회
-  struct file *stdin_file =
-      syscall_get_std_file(STDIN_FILENO);  // STDIN 더미 파일 포인터 준비
-  struct file *stdout_file =
-      syscall_get_std_file(STDOUT_FILENO);  // STDOUT 더미 파일 포인터 준비
 
-  if (file == stdin_file) {
-    return -1;  // STDIN으로는 출력할 수 없으므로 실패
-  }
+  // STDIN 더미 파일 포인터 준비
+  struct file *stdin_file = syscall_get_std_file(STDIN_FILENO);
+  // STDOUT 더미 파일 포인터 준비
+  struct file *stdout_file = syscall_get_std_file(STDOUT_FILENO);
 
-  if (fd == STDERR_FILENO) {
-    return -1;  // 아직 STDERR 출력은 지원하지 않으므로 실패 처리
-  }
+  if (file == stdin_file) return -1;  // STDIN으로는 출력할 수 없으므로 실패
+
+  // 아직 STDERR 출력은 지원하지 않으므로 실패 처리
+  if (fd == STDERR_FILENO) return -1;
 
   if (file == stdout_file) {
-    if (current->stdout_count == 0) {
-      return -1;  // STDOUT이 모두 닫힌 상태라면 출력 불가
-    }
+    // STDOUT이 모두 닫힌 상태라면 출력 불가
+    if (current->stdout_count == 0) return -1;
+
     putbuf(buffer, size);  // 콘솔에 버퍼 내용을 그대로 출력
     return size;           // 출력한 바이트 수 반환
   }
 
-  if (file == NULL) {
-    return -1;  // 열려 있지 않은 fd이므로 실패
-  }
+  if (file == NULL) return -1;  // 열려 있지 않은 fd이므로 실패
 
   // 커널영역 복사
   void *kbuf = palloc_get_page(PAL_ZERO);
-  copy_user_string(kbuf, buffer, size);
+  copy_in(kbuf, buffer, size);
+
   lock_acquire(&filesys_lock);  // 파일 시스템 접근 보호를 위해 락 획득
   int bytes_write = file_write(file, kbuf, size);  // 파일에 데이터 쓰기 수행
   lock_release(&filesys_lock);                     // 파일 연산 후 락 해제
 
-  if (bytes_write < 0) {
-    return -1;  // 쓰기가 실패했다면 오류 반환
-  }
   palloc_free_page(kbuf);
+  if (bytes_write < 0) return -1;  // 쓰기가 실패했다면 오류 반환
+
   return bytes_write;  // 실제로 기록한 바이트 수 반환
 }
 
 int syscall_read(int fd, void *buffer, unsigned size) {
-  not_map_vali_ptr(buffer, size);  // 사용자 버퍼가 커널에서 접근 가능한지 확인
+  // 사용자 버퍼가 커널에서 접근 가능한지
+  check_user_buffer(buffer, size, false);
+
   struct thread *current = thread_current();  // 현재 스레드 포인터 확보
   struct file *file = process_get_file(fd);   // fd에 연결된 파일 객체 조회
-  struct file *stdin_file =
-      syscall_get_std_file(STDIN_FILENO);  // STDIN 더미 파일 포인터 준비
-  struct file *stdout_file =
-      syscall_get_std_file(STDOUT_FILENO);  // STDOUT 더미 파일 포인터 준비
+  // STDIN 더미 파일 포인터 준비
+  struct file *stdin_file = syscall_get_std_file(STDIN_FILENO);
+  // STDOUT 더미 파일 포인터 준비
+  struct file *stdout_file = syscall_get_std_file(STDOUT_FILENO);
 
   if (file == stdin_file) {
     if (current->stdin_count == 0) {
@@ -359,22 +353,23 @@ int syscall_read(int fd, void *buffer, unsigned size) {
 
     return size;  // 요청한 길이만큼 읽었으므로 그대로 반환
   }
+  // STDOUT/STDERR에서는 읽기를 지원하지 않음
+  if (file == stdout_file || fd == STDERR_FILENO) return -1;
 
-  if (file == stdout_file || fd == STDERR_FILENO) {
-    return -1;  // STDOUT/STDERR에서는 읽기를 지원하지 않음
-  }
+  // 열려 있지 않은 fd라면 실패
+  if (file == NULL) return -1;
 
-  if (file == NULL) {
-    return -1;  // 열려 있지 않은 fd라면 실패
-  }
   // 커널영역 복사
   void *kbuf = palloc_get_page(PAL_ZERO);
 
-  lock_acquire(&filesys_lock);  // 파일 시스템 접근 보호를 위해 락 획득
-  int bytes_read = file_read(file, kbuf, size);  // 파일에서 데이터 읽어오기
-  lock_release(&filesys_lock);                   // 파일 연산 후 락 해제
+  // 파일 시스템 접근 보호를 위해 락 획득
+  lock_acquire(&filesys_lock);
+  // 파일에서 데이터 읽어오기
+  int bytes_read = file_read(file, kbuf, size);
+  // 파일 연산 후 락 해제
+  lock_release(&filesys_lock);
 
-  if (bytes_read > 0) copy_user_string_for_read(buffer, kbuf, bytes_read);
+  if (bytes_read > 0) memcpy(buffer, kbuf, bytes_read);
   // 해제
   palloc_free_page(kbuf);
   return bytes_read;  // 실제로 읽은 바이트 수 반환
@@ -395,18 +390,24 @@ int syscall_filesize(int fd) {
 
 /* 파일을 오픈하는 시스템콜 핸들러 */
 int syscall_open(const char *file_name) {
-  // 사용자 포인터 유효성 검사 (커널 주소/NULL/미매핑 주소 거부)
-  usr_address_vali(file_name);
+  if (file_name == NULL) return -1;
+
+  char *k_file = palloc_get_page(PAL_ZERO);
+  if (!copy_in_string(k_file, file_name)) {
+    palloc_free_page(k_file);
+    syscall_exit(-1);
+  }
 
   // 파일 시스템 접근을 위한 락 획득
   lock_acquire(&filesys_lock);
 
   // 파일 시스템에서 파일 열기 시도
-  struct file *file = filesys_open(file_name);
+  struct file *file = filesys_open(k_file);
 
   // 파일이 없거나 열기에 실패한 경우 -1 반환
   if (file == NULL) {
     lock_release(&filesys_lock);
+    palloc_free_page(k_file);
     return -1;
   }
 
@@ -417,59 +418,58 @@ int syscall_open(const char *file_name) {
   if (fd == -1) {
     file_close(file);
   }
-
   // 파일 시스템 락 해제
   lock_release(&filesys_lock);
+  palloc_free_page(k_file);
 
   // 파일 디스크립터 번호 반환, 실패 시 -1 반환
   return fd;
 }
 
-/* 사용자 문자열 str이 \0을 만날 때까지 매 바이트 접근 가능한지 확인
-   → 문자열 전체가 사용자 영역 내에 안전하게 존재해야 함
-   → 접근 불가능한 주소를 만나면 프로세스를 종료함 (syscall_exit(-1))
-   → 사용 예: exec("..."), open("...") 등에서 문자열 인자 검증 */
-void vali_string(const char *str) {
-  for (const char *p = str;; p++) {
-    not_map_vali_ptr(p,
-                     1);  // 현재 문자가 존재하는 1바이트 주소가 유효한지 확인
-    if (*p == '\0') {
-      break;  // 문자열 끝(널 문자)에 도달하면 검사 종료
-    }
-  }
-}
-
 // 매핑이 안되어있는게 정상.
 /* 파일을 삭제하는 시스템콜 핸들러 */
 bool syscall_remove(const char *file) {
-  // 사용자 포인터 유효성 검사 (커널 주소/NULL/미매핑 주소 거부)
-  usr_address_vali(file);
+  if (file == NULL) return false;
+
+  char *k_file = palloc_get_page(PAL_ZERO);
+  if (!copy_in_string(k_file, file)) {
+    palloc_free_page(k_file);
+    syscall_exit(-1);
+  }
+
+  // 파일 시스템에 생성 시도
+  bool success = filesys_remove(k_file);
+
+  palloc_free_page(k_file);
   // 파일 시스템에서 해당 경로의 파일 삭제 시도, 성공 여부 반환
-  return filesys_remove(file);
+  return success;
 }
 
 /* 파일을 생성하는 시스템콜 핸들러 */
 bool syscall_create(const char *file, unsigned initial_size) {
-  // 사용자 포인터 유효성 검사 (커널 주소/NULL/미매핑 주소 거부)
-  usr_address_vali(file);
+  if (file == NULL) syscall_exit(-1);
 
-  // 파일 시스템에 새 파일 생성 (초기 크기 지정), 성공 여부 반환 (boolean)
-  bool isSucc = filesys_create(file, initial_size);
-  if (!isSucc) {
-    return false;
+  char *k_file = palloc_get_page(PAL_ZERO);
+  if (!copy_in_string(k_file, file)) {
+    palloc_free_page(k_file);
+    syscall_exit(-1);
   }
-  return true;
+
+  // 파일 시스템에 생성 시도
+  bool success = filesys_create(k_file, initial_size);
+
+  palloc_free_page(k_file);
+  return success;
 }
 
 pid_t syscall_fork(const char *name, struct intr_frame *f) {
-  // 사용자 영역 포인터인지, 유효한 페이지에 매핑되어 있는지 선행 검사
-  usr_address_vali(name);
-
   void *kbuf = palloc_get_page(PAL_ZERO);
   if (kbuf == NULL) syscall_exit(-1);
 
-  copy_user_string_for_read(kbuf, name, PGSIZE);
-
+  if (!copy_in_string(kbuf, name)) {
+    palloc_free_page(kbuf);
+    syscall_exit(-1);
+  }
   tid_t child = process_fork(kbuf, f);
 
   palloc_free_page(kbuf);
@@ -480,21 +480,18 @@ pid_t syscall_fork(const char *name, struct intr_frame *f) {
 
 int syscall_wait(int pid) { return process_wait(pid); }
 
+// exec는 실패하면 그냥 -1, 기존 프로세스는 동작하게 하기 위함
+// 페이지는 메모리가 교체되기때문에 상관없다.
 int syscall_exec(const char *cmd_line) {
-  // 유효한 주소인지 검사
-  usr_address_vali(cmd_line);
-
   // 사용자로부터 받은 문자열(cmd_line)을 복사할 커널 영역의 페이지를 할당
   // PAL_ZERO는 할당된 메모리를 0으로 초기화하라는 의미
   char *cmd_line_copy = palloc_get_page(PAL_ZERO);
 
   // 만약 메모리 할당에 실패했다면, exit 처리
-  if (cmd_line_copy == NULL) {
-    return -1;
-  }
+  if (cmd_line_copy == NULL) return -1;
 
   // 사용자 영역 문자열을 안전하게 복사하면서 페이지 경계를 검사한다.
-  if (!copy_user_string(cmd_line_copy, cmd_line, PGSIZE)) {
+  if (!copy_in_string(cmd_line_copy, cmd_line)) {
     palloc_free_page(cmd_line_copy);
     return -1;
   }
@@ -502,7 +499,8 @@ int syscall_exec(const char *cmd_line) {
   // 실제로 새로운 프로그램을 현재 프로세스 위에 실행
   // 실패하면 -1을 반환하므로, exit 처리
   if (process_exec(cmd_line_copy) == -1) {
-    syscall_exit(-1);
+    palloc_free_page(cmd_line_copy);
+    return -1;
   }
 
   // 여기까지 실행이 오면 안된다 - 라는 매크로
@@ -523,85 +521,51 @@ void syscall_halt(void) {
   power_off();
 }
 
-/* 사용자 주소 유효성 검증 유틸리티 */
-void usr_address_vali(const void *addr) {
-  // 다음 중 하나라도 해당하면 프로세스를 종료(-1)
-  // - 커널 주소 공간(is_kernel_vaddr)
-  // - NULL 포인터
-  // - 현재 프로세스의 페이지테이블(pml4)에 매핑되지 않은 주소
-  if (addr == NULL || !is_user_vaddr(addr) ||
-      pml4_get_page(thread_current()->pml4, addr) == NULL) {
-    syscall_exit(-1);  // 잘못된 사용자 포인터는 즉시 종료
-  }
+static bool is_user_mapped(const void *u_addr) {
+  if (u_addr == NULL || is_kernel_vaddr(u_addr)) return false;
+
+  return pml4_get_page(thread_current()->pml4, u_addr) != NULL;
 }
-bool copy_user_string_for_read(char *dst, const char *src, size_t max_len) {
-  for (size_t i = 0; i < max_len; i++) {
-    /* 매 바이트 접근 전에 해당 주소가 사용자 영역인지 검사한다. */
-    usr_address_vali(src + i);
-    char c = src[i];
-    dst[i] = c;
-    /* NULL 문자를 만났다면 복사가 완료된 것. */
-    if (c == '\0') {
-      return true;
+
+static bool only_user_addr(const void *u_addr) { return is_user_vaddr(u_addr); }
+
+static bool check_user_buffer(void *buffer, size_t size, bool to_read) {
+  uint8_t *ptr = (uint8_t *)buffer;
+  for (size_t i = 0; i < size; i++) {
+    if (!is_user_vaddr(ptr + i)) return false;
+
+    if (to_read) {
+      // 커널이 이 주소로부터 읽기 → 반드시 매핑돼야 함
+      if (!is_user_mapped(ptr + i)) return false;
+    } else {
+      // 커널이 이 주소에 쓰기 → lazy page 허용
+      // 단, 커널 주소만 거르기
+      if (!only_user_addr(ptr + i)) return false;
     }
   }
-  /* 문자열이 최대 허용 길이 안에서 끝나지 않았음. */
-  return false;
+  return true;
 }
 
-bool copy_user_string(char *dst, const char *src, size_t max_len) {
-  for (size_t i = 0; i < max_len; i++) {
-    /* 매 바이트 접근 전에 해당 주소가 사용자 영역인지 검사한다. */
-    // usr_address_vali(src + i);
-    char c = src[i];
-    dst[i] = c;
-    /* NULL 문자를 만났다면 복사가 완료된 것. */
-    if (c == '\0') {
-      return true;
-    }
+static void copy_in(void *dst, const void *src, size_t size) {
+  uint8_t *d = dst;
+  const uint8_t *s = src;
+
+  for (size_t i = 0; i < size; i++) {
+    if (!is_user_mapped(s + i)) syscall_exit(-1);
+    d[i] = s[i];
   }
-  /* 문자열이 최대 허용 길이 안에서 끝나지 않았음. */
-  return false;
 }
 
-/* 내부 헬퍼: 단일 가상 주소 user_addr이
-   - NULL이 아니고
-   - 사용자 영역에 속하며
-   - 현재 프로세스의 페이지 테이블에 매핑되어 있는지 확인 */
-bool check_page(const void *user_addr) {
-  return user_addr != NULL && is_user_vaddr(user_addr);
-  // pml4_get_page(thread_current()->pml4, user_addr) != NULL
-}
+static bool copy_in_string(void *k_addr, const char *user_str) {
+  uint8_t *k_buf = (uint8_t *)k_addr;
+  size_t i = 0;
+  while (true) {
+    if (!is_user_mapped(user_str + i)) return false;
 
-/* 사용자 포인터 user_addr로부터 size 바이트까지의 주소 범위를
-   페이지 단위로 하나씩 순회하며 모두 접근 가능한지 확인
-   → 접근 불가능한 주소가 포함되어 있으면 프로세스를 종료함 (syscall_exit(-1))
-   → 사용 예: read(), write(), exec() 등에서 전달받은 사용자 버퍼 검증 */
-void not_map_vali_ptr(const void *user_addr, size_t size) {
-  if (size == 0) {
-    return;  // 검사할 바이트 수가 0이면 return
-  }
+    k_buf[i] = user_str[i];
+    if (user_str[i] == '\0') return true;
+    i++;
 
-  const uint8_t *check_ptr = user_addr;  // 현재 검사할 위치 (byte 단위 포인터)
-  size_t byte_left = size;               // 검사해야 할 남은 바이트 수
-
-  // 검사할 전체 영역을 페이지 단위로 나누어 한 페이지씩 접근 가능 여부를 확인
-  while (byte_left > 0) {
-    // 현재 check_ptr 포인터가 가리키는 주소가 사용자 영역에 있고
-    // 실제로 물리 메모리에 매핑되어 있는지 확인
-    if (!check_page(check_ptr)) {
-      syscall_exit(-1);  // 잘못된 주소일 경우, 즉시 프로세스 종료
-    }
-
-    // 현재 페이지에서 끝까지 남은 바이트 수 계산
-    /* pg_ofs() - 예를 들어, 페이지 크기가 4KB라면, 0~4095 바이트 범위 안에서
-     * 어느 지점에 데이터가 있는지를 나타내는 값이 offset입니다 */
-    size_t page_left = PGSIZE - pg_ofs(check_ptr);
-
-    // 남은 전체 바이트와 현재 페이지에서 가능한 바이트 중 더 작은 만큼만 이동
-    size_t chunk = byte_left < page_left ? byte_left : page_left;
-
-    check_ptr += chunk;  // 검사할 포인터를 다음 영역으로 이동
-    byte_left -= chunk;  // 검사해야 할 남은 바이트 수 갱신
+    if (i >= PGSIZE) return false;
   }
 }
