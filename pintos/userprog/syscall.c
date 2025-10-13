@@ -43,7 +43,7 @@ static void copy_in(void *dst, const void *src, size_t size);
 static bool copy_in_string(void *k_addr, const char *user_str);
 static void *syscall_mmap(void *addr, size_t length, int writable, int fd,
                           off_t offset);
-
+static void syscall_munmap(void *start_addr);
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
 
@@ -139,6 +139,10 @@ void syscall_handler(struct intr_frame *f) {
     case SYS_MMAP:
       f->R.rax = syscall_mmap((void *)f->R.rdi, (size_t)f->R.rsi, (int)f->R.rdx,
                               (int)f->R.rcx, (off_t)f->R.r8);
+      break;
+
+    case SYS_MUNMAP:
+      syscall_munmap((void *)f->R.rdi);
 
       break;
     default:
@@ -537,6 +541,15 @@ static void *syscall_mmap(void *addr, size_t length, int writable, int fd,
   void *result = do_mmap(addr, length, writable, file, offset);
 
   return result;
+}
+
+// 명시적으로 mmap 해제
+static void syscall_munmap(void *start_addr) {
+  if (start_addr == NULL) return NULL;
+  if (start_addr == 0) return NULL;
+  if (is_kernel_vaddr(start_addr)) return NULL;
+
+  do_munmap(start_addr);
 }
 
 static bool is_user_mapped(const void *u_addr) {

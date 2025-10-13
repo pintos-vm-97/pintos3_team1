@@ -134,11 +134,12 @@ bool spt_insert_page(struct supplemental_page_table *spt, struct page *page) {
 }
 
 void spt_remove_page(struct supplemental_page_table *spt, struct page *page) {
-  struct hash_elem *he = hash_delete(&spt->page_table, &page->hash_elem);
-  if (he != NULL) {
-    // double free 위험
-    vm_dealloc_page(page);
-  }
+  hash_delete(&spt->page_table, &page->hash_elem);
+  void *kva = page->frame->kva;
+  void *va = page->va;
+  vm_dealloc_page(page);
+  pml4_clear_page(thread_current()->pml4, va);
+  palloc_free_page(kva);
 }
 
 /* Get the struct frame, that will be evicted. */
@@ -338,26 +339,6 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst,
     }
   }
   return true;
-
-  // *page = (struct page){
-  //     .operations = &uninit_ops,  // 일단 uninit 전용 operatoins 연결
-  //     .va = va,                   // 페이지가 담당할 사용자 가상주소
-  //     .frame = NULL,              // 실제 프레임은 NULL
-  //     .uninit = (struct uninit_page){
-  //         .init =
-  //             init,  // lazy-load 때 실제 내용을 채울
-  //             함수(vm_initializer같은..)
-  //         .type = type,  // 최종 타입힌트 (anon, file)
-  //         .aux = aux,    // init에 전달할 부가정보
-  //         .page_initializer =
-  //             initializer,  // uninit->실제타입으로 변환시키는 함수
-  //     }};
-
-  // struct lazy_load_aux *aux = malloc(sizeof(struct lazy_load_aux));
-  //   aux->file = file;
-  //   aux->page_read_bytes = page_read_bytes;
-  //   aux->page_zero_bytes = page_zero_bytes;
-  //   aux->ofs = ofs;
 }
 
 /* Free the resource hold by the supplemental page table */

@@ -6,7 +6,16 @@
 struct page;
 enum vm_type;
 
-struct file_page {};
+struct file_page {
+  struct lazy_load_aux *fp_aux;
+};
+
+struct mmap_info {
+  void *start_addr;
+  struct file *file;
+  int page_cnt;
+  struct list_elem elem;
+};
 
 void vm_file_init(void);
 bool file_backed_initializer(struct page *page, enum vm_type type, void *kva);

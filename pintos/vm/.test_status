@@ -14,7 +14,7 @@ read-bad-fd PASS
 priority-donate-multiple PASS
 args-multiple PASS
 lg-seq-random PASS
-syn-write FAIL
+syn-write PASS
 syn-remove PASS
 priority-donate-one PASS
 mmap-overlap FAIL
@@ -28,7 +28,7 @@ page-shuffle PASS
 exec-missing PASS
 exec-arg PASS
 page-merge-mm FAIL
-read-bad-ptr PASS
+read-bad-ptr FAIL
 create-long PASS
 mmap-remove FAIL
 mmap-read FAIL
@@ -41,7 +41,7 @@ rox-multichild PASS
 create-bound PASS
 lg-random PASS
 page-merge-seq PASS
-pt-bad-read PASS
+pt-bad-read FAIL
 priority-condvar PASS
 priority-donate-nest PASS
 page-merge-par FAIL
