@@ -70,7 +70,8 @@
     "anon.h": "c",
     "inttypes.h": "c",
     "main.h": "c",
-    "loader.h": "c"
+    "loader.h": "c",
+    "vaddr.h": "c"
   },
   /* 포맷팅 설정 */
   "editor.formatOnSave": true,

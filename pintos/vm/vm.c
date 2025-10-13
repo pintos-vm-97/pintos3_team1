@@ -222,7 +222,7 @@ bool vm_try_handle_fault(struct intr_frame *f, void *addr, bool user,
   struct page *page = spt_find_page(spt, addr);
   if (page != NULL) return vm_do_claim_page(page);
 
-  // 2. 없으면 “스택 확장 조건”을 검사
+  // 2. 없으면 스택 확장 조건을 검사
   if (valid_stack_growth(f, addr)) return vm_stack_growth(addr);
 
   // 3. 그 외는 fault 처리 불가

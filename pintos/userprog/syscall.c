@@ -41,6 +41,8 @@ static bool only_user_addr(const void *u_addr);
 static bool check_user_buffer(void *buffer, size_t size, bool to_read);
 static void copy_in(void *dst, const void *src, size_t size);
 static bool copy_in_string(void *k_addr, const char *user_str);
+static void *syscall_mmap(void *addr, size_t length, int writable, int fd,
+                          off_t offset);
 
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
@@ -133,6 +135,11 @@ void syscall_handler(struct intr_frame *f) {
     case SYS_DUP2:
       // dup2(oldfd, newfd) 요청을 처리하고 반환값을 rax에 기록
       f->R.rax = syscall_dup2((int)f->R.rdi, (int)f->R.rsi);
+      break;
+    case SYS_MMAP:
+      f->R.rax = syscall_mmap((void *)f->R.rdi, (size_t)f->R.rsi, (int)f->R.rdx,
+                              (int)f->R.rcx, (off_t)f->R.r8);
+
       break;
     default:
       printf("system call!\n");
@@ -513,6 +520,23 @@ void syscall_exit(int status) {
 void syscall_halt(void) {
   // 전원 끄기: Pintos/QEMU 종료
   power_off();
+}
+
+static void *syscall_mmap(void *addr, size_t length, int writable, int fd,
+                          off_t offset) {
+  if (addr == NULL) return NULL;
+  if (addr == 0) return NULL;
+  if (is_kernel_vaddr(addr)) return NULL;
+  if (length == 0) return NULL;
+  if (fd < 2) return NULL;
+  if (((uint64_t)addr % PGSIZE) == 0) return NULL;
+
+  struct file *file = process_get_file(fd);
+  if (file == NULL) return NULL;
+
+  void *result = do_mmap(addr, length, writable, file, offset);
+
+  return result;
 }
 
 static bool is_user_mapped(const void *u_addr) {
