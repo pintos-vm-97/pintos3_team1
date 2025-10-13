@@ -6,7 +6,6 @@
 #include <stdint.h>
 
 #include "threads/loader.h"
-
 /* Functions and macros for working with virtual addresses.
  *
  * See pte.h for functions and macros specifically for x86
@@ -34,7 +33,6 @@
 
 /* Kernel virtual address start */
 #define KERN_BASE LOADER_KERN_BASE
-
 /* User stack start */
 #define USER_STACK 0x47480000
 

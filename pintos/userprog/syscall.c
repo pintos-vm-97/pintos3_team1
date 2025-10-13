@@ -111,8 +111,8 @@ void syscall_handler(struct intr_frame *f) {
       f->R.rax = syscall_filesize((int)f->R.rdi);
       break;
     case SYS_READ:
-      f->R.rax =
-          syscall_read((int)f->R.rdi, (void *)f->R.rsi, (unsigned)f->R.rdx);
+      f->R.rax = syscall_read((int)f->R.rdi, (const void *)f->R.rsi,
+                              (unsigned)f->R.rdx);
       break;
     case SYS_WRITE:
       int fd = (int)f->R.rdi;
@@ -290,7 +290,8 @@ void syscall_close(int fd) {
 
 int syscall_write(int fd, const void *buffer, unsigned size) {
   // 사용자 버퍼가 유효한 커널 접근 범위인지 확인
-  check_user_buffer(buffer, size, true);
+  if (!only_user_addr(buffer)) syscall_exit(-1);
+  // check_user_buffer(buffer, size, false);
 
   struct thread *current = thread_current();  // 현재 스레드 포인터 확보
   struct file *file = process_get_file(fd);   // fd에 대응되는 파일 객체 조회
@@ -308,30 +309,23 @@ int syscall_write(int fd, const void *buffer, unsigned size) {
   if (file == stdout_file) {
     // STDOUT이 모두 닫힌 상태라면 출력 불가
     if (current->stdout_count == 0) return -1;
-
     putbuf(buffer, size);  // 콘솔에 버퍼 내용을 그대로 출력
     return size;           // 출력한 바이트 수 반환
   }
 
   if (file == NULL) return -1;  // 열려 있지 않은 fd이므로 실패
 
-  // 커널영역 복사
-  void *kbuf = palloc_get_page(PAL_ZERO);
-  copy_in(kbuf, buffer, size);
-
-  lock_acquire(&filesys_lock);  // 파일 시스템 접근 보호를 위해 락 획득
-  int bytes_write = file_write(file, kbuf, size);  // 파일에 데이터 쓰기 수행
-  lock_release(&filesys_lock);                     // 파일 연산 후 락 해제
-
-  palloc_free_page(kbuf);
-  if (bytes_write < 0) return -1;  // 쓰기가 실패했다면 오류 반환
-
-  return bytes_write;  // 실제로 기록한 바이트 수 반환
+  return file_write(file, buffer, size);  // 파일에 데이터 쓰기 수행
 }
 
 int syscall_read(int fd, void *buffer, unsigned size) {
   // 사용자 버퍼가 커널에서 접근 가능한지
-  check_user_buffer(buffer, size, false);
+  // check_user_buffer(buffer, size, true);
+  if (!only_user_addr(buffer)) syscall_exit(-1);
+
+  // 페이지를 찾는다 - buffere 주소에 맞는 // 매 페이지마다.
+  // 페이지가 null이면 그냥 진행
+  // 페이지가 있는데 writable이 false면은 syscall_exit(-1) or return false
 
   struct thread *current = thread_current();  // 현재 스레드 포인터 확보
   struct file *file = process_get_file(fd);   // fd에 연결된 파일 객체 조회
@@ -359,19 +353,19 @@ int syscall_read(int fd, void *buffer, unsigned size) {
   // 열려 있지 않은 fd라면 실패
   if (file == NULL) return -1;
 
-  // 커널영역 복사
-  void *kbuf = palloc_get_page(PAL_ZERO);
+  // // 커널영역 복사
+  // void *kbuf = palloc_get_page(PAL_ZERO);
 
   // 파일 시스템 접근 보호를 위해 락 획득
   lock_acquire(&filesys_lock);
   // 파일에서 데이터 읽어오기
-  int bytes_read = file_read(file, kbuf, size);
+  int bytes_read = file_read(file, buffer, size);
   // 파일 연산 후 락 해제
   lock_release(&filesys_lock);
 
-  if (bytes_read > 0) memcpy(buffer, kbuf, bytes_read);
+  // if (bytes_read > 0) memcpy(buffer, kbuf, bytes_read);
   // 해제
-  palloc_free_page(kbuf);
+  // palloc_free_page(kbuf);
   return bytes_read;  // 실제로 읽은 바이트 수 반환
 }
 
@@ -527,20 +521,23 @@ static bool is_user_mapped(const void *u_addr) {
   return pml4_get_page(thread_current()->pml4, u_addr) != NULL;
 }
 
-static bool only_user_addr(const void *u_addr) { return is_user_vaddr(u_addr); }
+static bool only_user_addr(const void *u_addr) {
+  if (u_addr == NULL || is_kernel_vaddr(u_addr)) return false;
+  return true;
+}
 
 static bool check_user_buffer(void *buffer, size_t size, bool to_read) {
   uint8_t *ptr = (uint8_t *)buffer;
   for (size_t i = 0; i < size; i++) {
-    if (!is_user_vaddr(ptr + i)) return false;
+    if (!is_user_vaddr(ptr + i)) syscall_exit(-1);
 
     if (to_read) {
       // 커널이 이 주소로부터 읽기 → 반드시 매핑돼야 함
-      if (!is_user_mapped(ptr + i)) return false;
+      if (!is_user_mapped(ptr + i)) syscall_exit(-1);
     } else {
       // 커널이 이 주소에 쓰기 → lazy page 허용
       // 단, 커널 주소만 거르기
-      if (!only_user_addr(ptr + i)) return false;
+      if (!only_user_addr(ptr + i)) syscall_exit(-1);
     }
   }
   return true;

@@ -144,7 +144,7 @@ static void page_fault(struct intr_frame *f) {
   /* Count page faults. */
   page_fault_cnt++;
 
-  if (user && !is_user_vaddr(fault_addr))
+  if (!user && is_user_vaddr(fault_addr))
     syscall_exit(-1);  // 유저의 잘못된 주소
 
   /* If the fault is true fault, show info and exit. */
