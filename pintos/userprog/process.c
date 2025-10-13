@@ -781,13 +781,10 @@ static bool load(const char* file_name, struct intr_frame* if_) {
 
   /* TODO: Your code goes here.
    * TODO: Implement argument passing (see project2/argument_passing.html). */
-
   success = true;
 
 done:
   if (lock_held) lock_release(&filesys_lock);
-  /* We arrive here whether the load is successful or not. */
-  // file_close (file);
   return success;
 }
 
@@ -1063,7 +1060,7 @@ static bool install_page(void* upage, void* kpage, bool writable) {
 bool lazy_load_segment(struct page* page, void* aux) {
   struct lazy_load_aux* llaux = (struct lazy_load_aux*)aux;
   struct file_page* file_page = &page->file;
-  //struct lazy_load_aux* aux = page->uninit.aux;
+  // struct lazy_load_aux* aux = page->uninit.aux;
 
   file_page->file = llaux->file;
   file_page->ofs = llaux->ofs;
