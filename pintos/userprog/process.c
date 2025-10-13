@@ -1082,7 +1082,6 @@ bool lazy_load_segment(struct page* page, void* aux) {
   memset(kva + read_bytes, 0, llaux->page_zero_bytes);
   // todo : reopen했던거는 file_close해야되는데 어디서 할지 나중에 생각하기 (이
   // 함수가 아니더라도 다른 곳에서)
-  page->file.total_file_length = llaux->total_file_length;
   free(aux);
   return true;
 }
@@ -1112,7 +1111,6 @@ static bool load_segment(struct file* file, off_t ofs, uint8_t* upage,
   /* 읽어야 할 오프셋도 시작주소여야 함 */
   ASSERT(ofs % PGSIZE == 0);
 
-  size_t total_file_length = (size_t)file_length(file);
   while (read_bytes > 0 || zero_bytes > 0) {
     /* Do calculate how to fill this page.
      * We will read PAGE_READ_BYTES bytes from FILE
@@ -1123,7 +1121,6 @@ static bool load_segment(struct file* file, off_t ofs, uint8_t* upage,
     /* TODO: Set up aux to pass information to the lazy_load_segment. */
     struct lazy_load_aux* aux = malloc(sizeof(struct lazy_load_aux));
     aux->file = file;
-    aux->total_file_length = total_file_length;
     aux->page_read_bytes = page_read_bytes;
     aux->page_zero_bytes = page_zero_bytes;
     aux->ofs = ofs;

@@ -6,7 +6,6 @@
 #ifdef VM
 struct lazy_load_aux {
   struct file *file;
-  size_t total_file_length;
   off_t ofs;
   size_t page_read_bytes;
   size_t page_zero_bytes;
@@ -27,6 +26,5 @@ struct thread *get_child_thread(tid_t child_tid);
 
 int process_add_file(struct file *file);
 struct file *process_get_file(int fd);
-
 
 #endif /* userprog/process.h */

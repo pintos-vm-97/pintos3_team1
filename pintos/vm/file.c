@@ -28,8 +28,8 @@ void vm_file_init(void) { lock_init(&file_lock); }
 bool file_backed_initializer(struct page* page, enum vm_type type, void* kva) {
   /* Set up the handler */
   page->operations = &file_ops;
-  struct file_page* file_page = &page->file;
-  struct lazy_load_aux* aux = page->uninit.aux;
+  // struct file_page* file_page = &page->file;
+  // struct lazy_load_aux* aux = page->uninit.aux;
 
   // file_page->file = aux->file;
   // file_page->ofs = aux->ofs;
@@ -118,10 +118,9 @@ void* do_mmap(void* addr, size_t length, int writable, struct file* file,
 
   struct lazy_load_aux* aux = NULL;
   off_t f_length = file_length(file);
-
   size_t read_bytes = (f_length > length) ? length : f_length;
   size_t total_zero_bytes = PGSIZE - (read_bytes % PGSIZE);
-  int need_page_cnt = (read_bytes + PGSIZE - 1) / PGSIZE;
+  // int need_page_cnt = (read_bytes + PGSIZE - 1) / PGSIZE; //최적화 할 때 쓸거
   void* base_addr = pg_round_down(addr);
   void* upage = base_addr;
 
@@ -137,7 +136,6 @@ void* do_mmap(void* addr, size_t length, int writable, struct file* file,
     aux = malloc(sizeof(struct lazy_load_aux));
     if (aux == NULL) return NULL;
     aux->file = reopened_file;
-    aux->total_file_length = f_length;
     aux->page_read_bytes = page_read_bytes;
     aux->ofs = offset;
     aux->is_writable = writable;
@@ -156,7 +154,7 @@ void* do_mmap(void* addr, size_t length, int writable, struct file* file,
     page->mmap_region = region;
     region->file = aux->file;
     region->base_addr = base_addr;
-    region->total_mapped_cnt = need_page_cnt;
+    // region->total_mapped_cnt = need_page_cnt;
     region->addr = upage;
     list_push_back(&thread_current()->mmap_list, &region->elem);
 
@@ -173,21 +171,31 @@ err_cleanup:
   return NULL;
 }
 
-static void remove_related_regions(void* base_addr) {
+static void destroy_mmap_region(struct mmap_region* region) {
   struct thread* t = thread_current();
-  struct list* mmap_list = &t->mmap_list;
+  struct page* page = spt_find_page(&t->spt, pg_round_down(region->addr));
+
+  if (page != NULL) {
+    if (page->operations->type == VM_UNINIT) {
+      free(page->uninit.aux);
+    }
+    spt_remove_page(&t->spt, page);  // 얘가 pml4_clear, frame 해제도 해줌
+  }
+  list_remove(&region->elem);
+  free(region);
+}
+
+static void remove_related_regions(void* base_addr) {
+  struct list* mmap_list = &thread_current()->mmap_list;
   struct list_elem* e = list_begin(mmap_list);
 
+  // 쓰레드가 가진 mmap_list돌면서 관련된 영역에 매핑된 page들 unmap
   for (e = list_begin(mmap_list); e != list_end(mmap_list);) {
     struct list_elem* next = list_next(e);
     struct mmap_region* region = list_entry(e, struct mmap_region, elem);
+    // base_addr이 같으면 mmap시 같이 mapping된걸로 간주하고 삭제
     if (region != NULL && region->base_addr == base_addr) {
-      struct page* page = spt_find_page(&t->spt, pg_round_down(region->addr));
-      if (page != NULL) {
-        spt_remove_page(&t->spt, page);  // 얘가 pml4_clear, frame 해제도 해줌
-      }
-      list_remove(e);
-      free(region);
+      destroy_mmap_region(region);
     }
     e = next;
   }
@@ -198,13 +206,11 @@ void do_munmap(void* addr) {
   if (addr == NULL) return;
 
   struct thread* t = thread_current();
-  struct list* mmap_list = &t->mmap_list;
   struct mmap_region* region = NULL;
-  struct list_elem* e;
   struct page* page = NULL;
   struct file* file = NULL;
 
-  if (list_empty(mmap_list)) return;
+  if (list_empty(&t->mmap_list)) return;
 
   page = spt_find_page(&t->spt, pg_round_down(addr));
   if (page == NULL || page->mmap_region == NULL) return;

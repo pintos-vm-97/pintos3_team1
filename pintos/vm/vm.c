@@ -57,8 +57,6 @@ static bool can_grow_stack(const struct intr_frame* f, void* addr,
 bool vm_alloc_page_with_initializer(enum vm_type type, void* upage,
                                     bool writable, vm_initializer* init,
                                     void* aux) {
-  // 외부에서 uninit type 날리면 안됨.
-  // ASSERT(VM_TYPE(type) != VM_UNINIT);
   struct supplemental_page_table* spt = &thread_current()->spt;
 
   /* Check wheter the upage is already occupied or not. */
