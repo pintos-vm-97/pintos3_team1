@@ -487,8 +487,9 @@ int process_exec(void *f_name) {
 
   /* If load failed, free f_name and quit. */
   if (!success) {
-    palloc_free_page(f_name);
-    return -1;
+    // palloc_free_page(f_name);
+    syscall_exit(-1);
+    // return -1;
   }
 
   argument_stack(argv, argc, &_if);

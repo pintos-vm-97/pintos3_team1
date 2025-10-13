@@ -493,7 +493,7 @@ int syscall_exec(const char *cmd_line) {
   // 실제로 새로운 프로그램을 현재 프로세스 위에 실행
   // 실패하면 -1을 반환하므로, exit 처리
   if (process_exec(cmd_line_copy) == -1) {
-    palloc_free_page(cmd_line_copy);
+    // palloc_free_page(cmd_line_copy);
     return -1;
   }
 
