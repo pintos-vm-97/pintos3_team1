@@ -364,9 +364,6 @@ bool page_less(const struct hash_elem *a, const struct hash_elem *b,
                void *aux) {
   struct page *page1 = hash_entry(a, struct page, hash_elem);
   struct page *page2 = hash_entry(b, struct page, hash_elem);
-  if (page1 == NULL || page2 == NULL) {
-    return false;
-  }
 
   return page1->va < page2->va ? true : false;
   /* A가 B보다 작으면 true를 반환하고,

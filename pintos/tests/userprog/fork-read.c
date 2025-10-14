@@ -19,6 +19,7 @@ void test_main(void) {
   buffer = get_boundary_area() - sizeof sample / 2;
   byte_cnt = read(handle, buffer, 20);
 
+  // msg("buffer : %s", buffer);
   if ((pid = fork("child"))) {
     wait(pid);
 
@@ -37,6 +38,7 @@ void test_main(void) {
   } else {
     msg("child run");
 
+    // CHECK((handle = handle), "여긴가");
     byte_cnt = read(handle, buffer + 20, sizeof sample - 21);
     if (byte_cnt != sizeof sample - 21)
       fail("read() returned %d instead of %zu", byte_cnt, sizeof sample - 21);
@@ -45,7 +47,6 @@ void test_main(void) {
       msg("text actually read:\n%s", buffer);
       fail("expected text differs from actual");
     }
-
     char magic_sentence[17] = "pintos is funny!";
     memcpy(buffer, magic_sentence, 17);
 

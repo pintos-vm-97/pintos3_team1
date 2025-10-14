@@ -7,6 +7,7 @@
 // 추가한부분
 #include "threads/vaddr.h"
 #include "threads/mmu.h"
+#include "threads/synch.h"
 #include "userprog/process.h"
 
 struct list frame_table;
@@ -189,8 +190,6 @@ static struct frame* vm_evict_frame(void) {
   if (!swap_out(page)) {
     return NULL;
   }
-  // pml4_clear_page(victim->owner_pml4, page->va); 이건 swap out에서 해주는게
-  // 맞나?
   victim->page = NULL;
   page->frame =
       NULL;  // SWAP_OUT에서 해주게 설계했지만 한번더 추가해봄 (방어적)
@@ -267,14 +266,9 @@ bool vm_try_handle_fault(struct intr_frame* f, void* addr, bool user,
       return false;  // writable은 false인데 write가 true로 오면 false
     }
 
-    bool result = vm_do_claim_page(page);
-    // false일 경우 디버깅 용이하도록 작업동안은 이렇게 고정(추후 Refac)
-    if (!result) {
-      return false;  // 여기다 break_point걸으면 진짜 치명적 예외터질때만 여기옴
-    } else {
-      return true;
-    }
+    return vm_do_claim_page(page);
   }
+
   // page가 없으면 stack 확장 여부 판단 필요
   return can_grow_stack(f, addr, user) ? vm_stack_growth(upage) : false;
 }
@@ -359,8 +353,13 @@ static struct lazy_load_aux* copy_aux(const struct lazy_load_aux* src) {
 static bool copy_uninit_page(struct supplemental_page_table* dst,
                              struct page* src) {
   if (VM_TYPE(src->uninit.type) == VM_ANON) {
-    if (!vm_alloc_page_with_initializer(
-            src->uninit.type, src->va, src->writable, src->uninit.init, NULL)) {
+    struct lazy_load_aux* copied_aux = NULL;
+    if (src->uninit.aux != NULL) {
+      copied_aux = copy_aux(src->uninit.aux);
+    }
+    if (!vm_alloc_page_with_initializer(src->uninit.type, src->va,
+                                        src->writable, src->uninit.init,
+                                        copied_aux)) {
       return false;
     }
     return true;
@@ -462,14 +461,12 @@ bool supplemental_page_table_copy(struct supplemental_page_table* dst UNUSED,
  */
 void supplemental_page_table_kill(struct supplemental_page_table* spt) {
   ASSERT(spt != NULL);
-  // spt_remove_page
   hash_clear(&spt->page_table,
              destruct_hash_elem);  // 일단 여기서 페이지별 destroy함수 호출 뒤
                                    // page free
   // Page 타입별 destroy가 핵심일듯?
   /* TODO: Destroy all the supplemental_page_table hold by thread and
    * TODO: writeback all the modified contents to the storage. */
-  // TODO: file-backed일 때 dirty 시 쓰기 필요
 }
 
 void dealloc_frame(struct frame* frame) {

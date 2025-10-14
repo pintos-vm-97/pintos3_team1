@@ -142,15 +142,13 @@ static void page_fault(struct intr_frame *f) {
   if (vm_try_handle_fault(f, fault_addr, user, write, not_present)) return;
 #endif
 
+#ifdef VM
   if (!user && is_user_vaddr(fault_addr)) {
     syscall_exit(-1);
     return;
   }
+#endif
 
-  // if (user) {
-  //   syscall_exit(-1);
-  //   return;
-  // }
   /* Count page faults. */
   page_fault_cnt++;
 

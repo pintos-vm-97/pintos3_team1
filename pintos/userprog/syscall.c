@@ -22,6 +22,7 @@
 #include "threads/thread.h"
 #include "userprog/gdt.h"
 #include "userprog/process.h"
+#include "vm/vm.h"
 
 struct lock filesys_lock;  // 파일 시스템 동기화용 전역 락
 
@@ -163,7 +164,8 @@ void syscall_handler(struct intr_frame* f) {
         break;
       }
 
-      f->R.rax = (void *)syscall_mmap((void*)f->R.rdi, (size_t) length, (int)f->R.rdx,
+      f->R.rax =
+          (void*)syscall_mmap((void*)f->R.rdi, (size_t)length, (int)f->R.rdx,
                               (int)f->R.r10, (off_t)f->R.r8);
       break;
 
@@ -189,28 +191,29 @@ struct file* syscall_get_std_file(int fd) {
   }
 }
 
-void syscall_munmap(void *addr){
+void syscall_munmap(void* addr) {
   if (addr == NULL || is_kernel_vaddr(addr)) return;
   do_munmap(addr);
 }
 
-bool is_exist_page(void *addr){
+bool is_exist_page(void* addr) {
   return spt_find_page(&thread_current()->spt, pg_round_down(addr)) != NULL;
 }
 
-void *syscall_mmap(void *addr, size_t length, int writable, int fd, off_t offset) {
+void* syscall_mmap(void* addr, size_t length, int writable, int fd,
+                   off_t offset) {
   if (addr == NULL || pg_ofs(addr) != 0 || length <= 0) return NULL;
   if (fd <= 2) return NULL;
   if (offset < 0 || (offset % PGSIZE) != 0) return NULL;
   if (is_exist_page(addr)) return NULL;
   if (is_kernel_vaddr(addr)) return NULL;
 
-  struct file *f = process_get_file(fd);
+  struct file* f = process_get_file(fd);
   if (f == NULL) {
     return NULL;
   }
 
-  void *vaddr = do_mmap(addr, (size_t) length, writable, f, offset);
+  void* vaddr = do_mmap(addr, (size_t)length, writable, f, offset);
   return vaddr;
 }
 
@@ -380,9 +383,7 @@ int syscall_write(int fd, const void* buffer, unsigned size) {
     return -1;  // 열려 있지 않은 fd이므로 실패
   }
 
-  lock_acquire(&filesys_lock);
   int bytes_write = file_write(file, buffer, size);  // 파일에 데이터 쓰기 수행
-  lock_release(&filesys_lock);
   if (bytes_write < 0) {
     return -1;  // 쓰기가 실패했다면 오류 반환
   }
@@ -393,9 +394,8 @@ int syscall_write(int fd, const void* buffer, unsigned size) {
 int syscall_read(int fd, void* buffer, unsigned size) {
   vali_pointer(buffer, size);  // 사용자 버퍼가 커널에서 접근 가능한지 확인
 
-  struct page* p =
-     spt_find_page(&thread_current()->spt, pg_round_down(buffer));
-  if (p != NULL && !p->writable){
+  struct page* p = spt_find_page(&thread_current()->spt, pg_round_down(buffer));
+  if (p != NULL && !p->writable) {
     syscall_exit(-1);
   }
 
@@ -428,7 +428,12 @@ int syscall_read(int fd, void* buffer, unsigned size) {
     return -1;
   }
 
-  return (int)file_read(file, buffer, size);
+  off_t read_bytes = (int)file_read(file, buffer, size);
+  if (read_bytes < 0) {
+    return -1;
+  }
+
+  return read_bytes;
 }
 
 int syscall_filesize(int fd) {

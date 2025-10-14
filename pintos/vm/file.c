@@ -31,8 +31,8 @@ bool file_backed_initializer(struct page* page, enum vm_type type, void* kva) {
   // struct file_page* file_page = &page->file;
   // struct lazy_load_aux* aux = page->uninit.aux;
 
-  // file_page->file = aux->file;
-  // file_page->ofs = aux->ofs;
+  // todo : 나중에 refactoring 시 여기서 초기화하도록 하기 (lazy_load_segment,
+  // copy에서 하지말고) file_page->file = aux->file; file_page->ofs = aux->ofs;
   // file_page->page_read_bytes = aux->page_read_bytes;
   // file_page->page_zero_bytes = aux->page_zero_bytes;
   // file_page->is_writable = aux->is_writable;
@@ -171,13 +171,17 @@ err_cleanup:
   return NULL;
 }
 
+static bool has_lazy_load_aux(struct page* page) {
+  return page->operations->type == VM_UNINIT && page->uninit.aux != NULL;
+}
+
 static void destroy_mmap_region(struct mmap_region* region) {
   struct thread* t = thread_current();
   struct page* page = spt_find_page(&t->spt, pg_round_down(region->addr));
 
   if (page != NULL) {
-    if (page->operations->type == VM_UNINIT) {
-      free(page->uninit.aux);
+    if (has_lazy_load_aux(page)) {
+      // free(page->uninit.aux);
     }
     spt_remove_page(&t->spt, page);  // 얘가 pml4_clear, frame 해제도 해줌
   }

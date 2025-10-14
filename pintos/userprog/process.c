@@ -702,7 +702,6 @@ static bool load(const char* file_name, struct intr_frame* if_) {
   lock_held = true;
   file = filesys_open(file_name);
   if (file == NULL) {
-    printf("load: %s: open failed\n", file_name);
     goto done;
   }
 
@@ -715,7 +714,6 @@ static bool load(const char* file_name, struct intr_frame* if_) {
       ehdr.e_machine != 0x3E  // amd64
       || ehdr.e_version != 1 || ehdr.e_phentsize != sizeof(struct Phdr) ||
       ehdr.e_phnum > 1024) {
-    printf("load: %s: error loading executable\n", file_name);
     goto done;
   }
 
