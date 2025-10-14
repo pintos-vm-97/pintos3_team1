@@ -352,24 +352,10 @@ static struct lazy_load_aux* copy_aux(const struct lazy_load_aux* src) {
 
 static bool copy_uninit_page(struct supplemental_page_table* dst,
                              struct page* src) {
-  if (VM_TYPE(src->uninit.type) == VM_ANON) {
-    struct lazy_load_aux* copied_aux = NULL;
-    if (src->uninit.aux != NULL) {
-      copied_aux = copy_aux(src->uninit.aux);
-    }
-    if (!vm_alloc_page_with_initializer(src->uninit.type, src->va,
-                                        src->writable, src->uninit.init,
-                                        copied_aux)) {
-      return false;
-    }
-    return true;
+  struct lazy_load_aux* copied_aux = NULL;
+  if (src->uninit.aux != NULL) {
+    copied_aux = copy_aux(src->uninit.aux);
   }
-
-  // 파일 기반일 경우
-  if (src->uninit.aux == NULL) return false;
-
-  struct lazy_load_aux* copied_aux = copy_aux(src->uninit.aux);
-  if (copied_aux == NULL) return false;
 
   if (!vm_alloc_page_with_initializer(src->uninit.type, src->va, src->writable,
                                       src->uninit.init, copied_aux)) {
