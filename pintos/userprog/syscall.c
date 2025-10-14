@@ -44,6 +44,8 @@ static bool copy_in_string(void *k_addr, const char *user_str);
 static void *syscall_mmap(void *addr, size_t length, int writable, int fd,
                           off_t offset);
 static void syscall_munmap(void *start_addr);
+static int check_fd(struct thread *t, int fd);
+
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
 
@@ -368,11 +370,11 @@ int syscall_read(int fd, void *buffer, unsigned size) {
   // void *kbuf = palloc_get_page(PAL_ZERO);
 
   // 파일 시스템 접근 보호를 위해 락 획득
-  lock_acquire(&filesys_lock);
+  // lock_acquire(&filesys_lock);
   // 파일에서 데이터 읽어오기
   int bytes_read = file_read(file, buffer, size);
   // 파일 연산 후 락 해제
-  lock_release(&filesys_lock);
+  // lock_release(&filesys_lock);
 
   // if (bytes_read > 0) memcpy(buffer, kbuf, bytes_read);
   // 해제
@@ -528,16 +530,30 @@ void syscall_halt(void) {
 
 static void *syscall_mmap(void *addr, size_t length, int writable, int fd,
                           off_t offset) {
+  // addr가 0인 경우 (Pintos의 일부 코드는 가상 페이지 0이 매핑되지 않았다고
+  // 가정함)
   if (addr == NULL) return NULL;
-  if (addr == 0) return NULL;
+  // addr가 커널 영억을 침범하는 경우
   if (is_kernel_vaddr(addr)) return NULL;
+  // addr가 페이지 정렬(page-aligned)되어 있지 않은 경우
+  if ((uint64_t)addr % PGSIZE != 0) return NULL;
+  // length가 0일 경우
   if (length == 0) return NULL;
-  if (fd < 2) return NULL;
-  if (((uint64_t)addr % PGSIZE) == 0) return NULL;
-
-  struct file *file = process_get_file(fd);
-  if (file == NULL) return NULL;
-
+  // length보다 offset이 클 경우
+  if (length < offset) return NULL;
+  struct thread *cur = thread_current();
+  // fd로 파일을 찾을 수 없는 경우
+  if (check_fd(cur, fd) == -1) return NULL;
+  struct file *file = cur->FDT[fd];
+  // 파일이 콘솔 입출력(STDIN_FILENO 또는 STDOUT_FILENO)을 나타내는 경우
+  if (IS_STDIO(file)) return NULL;
+  // fd로 열린 파일의 길이가 0일 경우
+  if (file_length(file) == 0) return NULL;
+  /* 매핑하려는 가상 주소 범위(addr부터 addr + length까지)가 기존에 매핑된
+     페이지 영역 (예: 코드, 데이터, 스택, 다른 mmap 영역)과 겹치는 경우 */
+  for (void *i = addr; i < addr + length; i += PGSIZE) {
+    if (spt_find_page(&cur->spt, i) != NULL) return NULL;
+  }
   void *result = do_mmap(addr, length, writable, file, offset);
 
   return result;
@@ -602,4 +618,11 @@ static bool copy_in_string(void *k_addr, const char *user_str) {
 
     if (i >= PGSIZE) return false;
   }
+}
+static int check_fd(struct thread *t, int fd) {
+  // 잘못된 fd 접근
+  if (fd < 0 || fd >= MAX_FD) return -1;
+  // 없는 fd 접근
+  if (t->FDT[fd] == NULL) return -1;
+  return 0;
 }

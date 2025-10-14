@@ -54,12 +54,12 @@ static void file_backed_destroy(struct page *page) {
                     file_info->page_read_bytes, file_info->ofs);
 
     // 더 이상 file_info 쓰지 않으면 free
-    file_close(file_info->file);
+    // file_close(file_info->file);
     free(file_info);
   }
 
-  // 프레임 해제
-  free(page->frame);
+  // 프레임 해제 // remove
+  // free(page->frame);
 }
 
 /* Do the mmap */
@@ -74,7 +74,11 @@ void *do_mmap(void *addr, size_t length, int writable, struct file *file,
   struct mmap_info *mp_info = malloc(sizeof(struct mmap_info));
   if (mp_info == NULL) return NULL;
 
-  int page_cnt = 0;
+  mp_info->file = reopened;
+  mp_info->start_addr = start_addr;
+  mp_info->page_cnt = 0;
+  list_push_back(&thread_current()->mm_list, &mp_info->elem);
+
   // 페이지마다 매핑
   while (length > 0) {
     size_t read_byte = length > PGSIZE ? PGSIZE : length;
@@ -92,18 +96,15 @@ void *do_mmap(void *addr, size_t length, int writable, struct file *file,
       return NULL;
     }
 
+    struct page *page = spt_find_page(&thread_current()->spt, addr);
+    page->mmap_info = mp_info;
+    page->mmap_page_index = mp_info->page_cnt;
+    mp_info->page_cnt++;
     /* Advance. */
     length -= read_byte;
     offset += read_byte;
     addr += PGSIZE;
-    page_cnt++;
   }
-
-  mp_info->file = reopened;
-  mp_info->start_addr = start_addr;
-  mp_info->page_cnt = page_cnt;
-
-  list_push_back(&thread_current()->mm_list, &mp_info->elem);
 
   return start_addr;
 }
@@ -111,41 +112,21 @@ void *do_mmap(void *addr, size_t length, int writable, struct file *file,
 /* Do the munmap */
 void do_munmap(void *addr) {
   struct thread *t = thread_current();
-  struct mmap_info *mp_info = find_mminfo_by_addr(t, addr);
-  if (mp_info == NULL) return;
+  struct page *page = spt_find_page(&t->spt, addr);
+  if (page == NULL || page->mmap_info == NULL) return;
 
-  for (int i = 0; i < mp_info->page_cnt; i++) {
-    void *cur_addr = mp_info->start_addr + i * PGSIZE;
-    struct page *page = spt_find_page(&t->spt, cur_addr);
-    if (page == NULL) continue;
+  struct mmap_info *mp = page->mmap_info;
+  void *cur = mp->start_addr;
 
-    if (page->operations->type == VM_FILE && pml4_is_dirty(t->pml4, page)) {
-      struct lazy_load_aux *f_aux = page->file.fp_aux;
-      struct file *file = f_aux->file;  // file-backed page
-      off_t ofs = f_aux->ofs;
-      size_t bytes = f_aux->page_read_bytes;
-      file_write_at(file, page->va, bytes, ofs);
-    }
-    spt_remove_page(&t->spt, page);
-  }
-  file_close(mp_info->file);
-  list_remove(&mp_info->elem);
-  free(mp_info);
-}
-
-static struct mmap_info *find_mminfo_by_addr(struct thread *t, void *addr) {
-  struct list_elem *i = list_begin(&t->mm_list);
-  struct mmap_info *ret = NULL;
-  for (i; i != list_end(&t->mm_list); i = i->next) {
-    struct mmap_info *mpinfo = list_entry(i, struct mmap_info, elem);
-
-    if (mpinfo->start_addr == addr) {
-      ret = mpinfo;
-      break;
-    }
+  for (int i = 0; i < mp->page_cnt; i++) {
+    struct page *p = spt_find_page(&t->spt, cur);
+    if (p) spt_remove_page(&t->spt, p);  // → destroy에서 dirty 처리
+    cur += PGSIZE;
   }
 
-  return ret;
+  file_close(mp->file);
+  list_remove(&mp->elem);
+  free(mp);
 }
 
 static bool lazy_file_segment(struct page *page, void *aux) {

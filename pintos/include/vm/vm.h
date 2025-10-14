@@ -64,6 +64,9 @@ struct page {
     struct page_cache page_cache;
 #endif
   };
+
+  struct mmap_info *mmap_info;
+  size_t mmap_page_index;
 };
 
 /* The representation of "frame" */

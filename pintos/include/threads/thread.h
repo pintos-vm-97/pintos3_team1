@@ -19,6 +19,11 @@ enum thread_status {
   THREAD_DYING    /* About to be destroyed. */
 };
 
+#define STDIN_FDNO (struct file *)1
+#define STDOUT_FDNO (struct file *)2
+
+#define IS_STDIO(filep) \
+  ((filep) == STDIN_FDNO || (filep) == STDOUT_FDNO) ? true : false
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;

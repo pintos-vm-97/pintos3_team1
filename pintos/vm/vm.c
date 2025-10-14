@@ -68,6 +68,10 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage,
     page->va = upage;
     page->writable = writable;
 
+    /* mmap데이터 NULL 초기화 */
+    page->mmap_info = NULL;
+    page->mmap_page_index = -1;
+
     bool (*initializer)(struct page *, enum vm_type, void *kva) = NULL;
     switch (VM_TYPE(type)) {
       case VM_ANON:
@@ -136,10 +140,12 @@ bool spt_insert_page(struct supplemental_page_table *spt, struct page *page) {
 void spt_remove_page(struct supplemental_page_table *spt, struct page *page) {
   hash_delete(&spt->page_table, &page->hash_elem);
   void *kva = page->frame->kva;
+  void *frame = page->frame;
   void *va = page->va;
   vm_dealloc_page(page);
   pml4_clear_page(thread_current()->pml4, va);
   palloc_free_page(kva);
+  free(frame);
 }
 
 /* Get the struct frame, that will be evicted. */
