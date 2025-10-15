@@ -1058,7 +1058,6 @@ static bool install_page(void* upage, void* kpage, bool writable) {
 bool lazy_load_segment(struct page* page, void* aux) {
   struct lazy_load_aux* llaux = (struct lazy_load_aux*)aux;
   struct file_page* file_page = &page->file;
-  // struct lazy_load_aux* aux = page->uninit.aux;
 
   file_page->file = llaux->file;
   file_page->ofs = llaux->ofs;

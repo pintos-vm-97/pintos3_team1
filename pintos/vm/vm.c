@@ -261,16 +261,16 @@ bool vm_try_handle_fault(struct intr_frame* f, void* addr, bool user,
 
   page = spt_find_page(spt, upage);
 
-  if (page) {
-    if (!page->writable && write) {
-      return false;  // writable은 false인데 write가 true로 오면 false
-    }
-
-    return vm_do_claim_page(page);
+  if (page == NULL) {
+    // page가 없으면 stack 확장 여부 판단 필요
+    return can_grow_stack(f, addr, user) ? vm_stack_growth(upage) : false;
   }
 
-  // page가 없으면 stack 확장 여부 판단 필요
-  return can_grow_stack(f, addr, user) ? vm_stack_growth(upage) : false;
+  if (!page->writable && write) {
+    return false;  // writable은 false인데 write가 true로 오면 false
+  }
+
+  return vm_do_claim_page(page);
 }
 
 // 스택 성장 조건 : 스택 bottot에서 어느정도 가깝고 최대스택크기 안 넘어야 됨
