@@ -5,8 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b4973f47-407f-47f1-9440-004d47309a3e" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/pintos/userprog/syscall.c" beforeDir="false" afterPath="$PROJECT_DIR$/pintos/userprog/syscall.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pintos/vm/.test_status" beforeDir="false" afterPath="$PROJECT_DIR$/pintos/vm/.test_status" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pintos/vm/anon.c" beforeDir="false" afterPath="$PROJECT_DIR$/pintos/vm/anon.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pintos/vm/vm.c" beforeDir="false" afterPath="$PROJECT_DIR$/pintos/vm/vm.c" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -22,12 +22,12 @@
     &quot;assignee&quot;: &quot;ARlegro&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "git@github.com:ARlegro/Pintos_VM_TEMP.git",
-    "accountId": "c3b7675d-cb84-4590-9844-f892f30550c4"
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;git@github.com:ARlegro/Pintos_VM_TEMP.git&quot;,
+    &quot;accountId&quot;: &quot;c3b7675d-cb84-4590-9844-f892f30550c4&quot;
   }
-}]]></component>
+}</component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 2
 }</component>
@@ -36,20 +36,20 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "temp",
-    "kotlin-language-version-configured": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;temp&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -68,6 +68,7 @@
       <updated>1759319111447</updated>
       <workItem from="1759319113463" duration="885000" />
       <workItem from="1759654284351" duration="624000" />
+      <workItem from="1760510891476" duration="615000" />
     </task>
     <servers />
   </component>

@@ -249,27 +249,28 @@ static bool vm_handle_wp(struct page* page UNUSED) { return true; }
 /* Return true on success */
 bool vm_try_handle_fault(struct intr_frame* f, void* addr, bool user,
                          bool write, bool not_present) {
-  /* addr 없거나 유저영역주소가 아니거나 PTE 존재하는 경우 false*/
-  // stack성장 넣으면서 코드 길어질 것 같아서 if문 합침
+  // 1. 각종 검증
   if (!is_user_vaddr(addr)) return false;
-
   if (addr == NULL || !is_user_vaddr(addr) || !not_present) return false;
 
   struct supplemental_page_table* spt = &thread_current()->spt;
   struct page* page = NULL;
   void* upage = pg_round_down(addr);
 
+  // 2. 페이지 찾기
   page = spt_find_page(spt, upage);
 
+  // 3. page가 없는 경우 처리 - stack 확장 여부 판단 및 처리 필요
   if (page == NULL) {
-    // page가 없으면 stack 확장 여부 판단 필요
     return can_grow_stack(f, addr, user) ? vm_stack_growth(upage) : false;
   }
 
+  // 4. page가 있는 경우의 예외 처리 : writable은 false인데 write시도 하는 경우
   if (!page->writable && write) {
     return false;  // writable은 false인데 write가 true로 오면 false
   }
 
+  // 5. page가 있는 경우 정상 처리 - fault난 page를 load요청
   return vm_do_claim_page(page);
 }
 
@@ -298,8 +299,6 @@ void vm_dealloc_page(struct page* page) {
 
 /* Claim the page that allocate on VA. */
 // GitBook : 주어진 VA에 페이지를 할당하고 해당 페이지에 프레임 할당
-// 근데 생각해보면 이미 page가 vm_alloc_page_with_initializer에서 malloc되어
-// 있을텐데?
 bool vm_claim_page(void* va) {
   if (va == NULL || is_kernel_vaddr(va)) return false;
 
@@ -327,13 +326,11 @@ static bool vm_do_claim_page(struct page* page) {
                      page->writable)) {
     return false;
   }
-  // 연결 성공이니까 frame table추가?
 
   return swap_in(page, frame->kva);
 }
 
 /* Initialize new supplemental page table */
-
 void supplemental_page_table_init(struct supplemental_page_table* spt UNUSED) {
   ASSERT(spt != NULL);
   hash_init(&spt->page_table, page_hash, page_less, NULL);

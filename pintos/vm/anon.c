@@ -97,7 +97,10 @@ static bool anon_swap_out(struct page *page) {
   lock_acquire(&swap_lock);
   size_t slot_idx =
       bitmap_scan_and_flip(swap_bitmap, 0, 1, false);  // false 는 빈거
-  if (slot_idx == BITMAP_ERROR) return false;
+  if (slot_idx == BITMAP_ERROR) {
+    lock_release(&swap_lock);
+    return false;
+  }
 
   for (int i = 0; i < SECTORS_PER_PAGE; i++) {
     disk_sector_t sector = (slot_idx * SECTORS_PER_PAGE) + i;
